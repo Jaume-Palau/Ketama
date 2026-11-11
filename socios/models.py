@@ -12,6 +12,9 @@ class Socio(models.Model):
     )
     nombre_completo = models.CharField("nombre completo", max_length=200)
     telefono = models.CharField("teléfono", max_length=30)
+    debe_cambiar_password = models.BooleanField(
+        "debe cambiar la contraseña", default=True
+    )
 
     class Meta:
         verbose_name = "socio"

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Inicio · Ketama{% endblock %}
+{% block content %}
+<h1>Te damos la bienvenida, {{ socio.nombre_completo }}</h1>
+<p>Ya puedes acceder a Ketama. Esta es tu página de inicio provisional.</p>
+<p><a href="{% url 'socios:cambiar_password' %}">Cambiar contraseña</a></p>
+<form method="post" action="{% url 'socios:logout' %}">
+    {% csrf_token %}
+    <button type="submit">Cerrar sesión</button>
+</form>
+{% endblock %}

@@ -7,11 +7,9 @@ La referencia de alcance es [ESPECIFICACION_PROYECTO.md](ESPECIFICACION_PROYECTO
 
 Está creado el esqueleto y el modelo `Socio`, vinculado al usuario nativo de
 Django. `geneticas` y `comunicacion` aún no tienen funcionalidades.
-Las rutas propias de estas aplicaciones aún no se conectan.
-La única ruta configurada es `/admin/`, con el administrador estándar de Django.
-La raíz `/` devuelve 404 hasta que se implemente la interfaz.
-
-La migración inicial de `socios` está preparada pero no se ha aplicado.
+El espacio de socios incluye acceso, cambio de contraseña, cierre de sesión y
+una bienvenida provisional. El panel de gestión conserva su entrada `/admin/`.
+La migración `0002_socio_debe_cambiar_password` está preparada sin aplicar.
 
 ## Gestión de socios
 
@@ -27,8 +25,72 @@ socios deben mantener desmarcadas las opciones de personal y superusuario.
 El administrador puede existir sin perfil de socio. No se crean perfiles
 automáticamente para todas las cuentas existentes.
 
-Las pantallas de login de socios, el cambio obligatorio de contraseña inicial
-y la importación CSV quedan pendientes. No se han añadido datos de socios reales.
+La importación CSV queda pendiente. No se han añadido datos de socios reales.
+
+## Autenticación de socios
+
+- `/acceso/`: número de socio (`User.username`) y contraseña, mediante
+  `AuthenticationForm` y `LoginView` de Django.
+- `/cambiar-password/`: contraseña actual y nueva contraseña confirmada,
+  mediante `PasswordChangeForm` y `PasswordChangeView`.
+- `/`: bienvenida provisional, disponible después del cambio obligatorio.
+- `/salir/`: cierre de sesión mediante POST con token CSRF.
+
+`Socio.debe_cambiar_password` vale `True` por defecto. La migración añade el
+indicador también a los perfiles existentes sin alterar sus contraseñas.
+En Admin se puede marcar de nuevo al entregar una contraseña temporal nueva.
+Solo un cambio válido de contraseña lo desmarca desde el espacio de socios.
+La nueva contraseña debe superar los validadores de Django y ser distinta de
+la actual. El cambio conserva la sesión mediante el mecanismo nativo de Django.
+
+`AccesoSociosMiddleware` protege todas las rutas del namespace `socios`:
+exige cuenta activa con perfil, rechaza personal y superusuarios, y fuerza el
+cambio pendiente antes de acceder a páginas privadas. Las futuras páginas
+privadas deben seguir este mismo control de acceso. Los destinos `next` del
+login se ignoran para evitar saltos al Admin o fuera del flujo obligatorio.
+Las respuestas de socios llevan cabeceras para evitar su almacenamiento en caché.
+
+Los formularios y rutas del Admin son independientes. El middleware de socios
+no interviene en `/admin/`; una cuenta de socio sin permisos de personal no puede
+entrar en ese panel, y una sesión del Admin no da acceso al espacio de socios.
+Se utiliza el motor de autenticación y sesiones nativo de un único proyecto Django.
+
+## Comprobación local del acceso
+
+No se han ejecutado migraciones ni cambiado contraseñas existentes durante esta
+implementación. Antes de probar, revisar la migración y ejecutar localmente:
+
+```sh
+source .venv/bin/activate
+python manage.py check
+python manage.py migrate --plan
+python manage.py migrate socios
+python manage.py runserver
+```
+
+Abrir `http://127.0.0.1:8000/acceso/` e introducir el número **0** y su contraseña
+actual. No hay que crear otra cuenta ni restablecerla. El perfil existente queda
+pendiente de cambio tras la migración. Verificar que abrir `/` directamente
+redirige al cambio y que se puede cerrar sesión sin completarlo.
+
+La prueba manual completa implica establecer voluntariamente una contraseña
+nueva desde el formulario; esta implementación no realiza ese cambio por sí sola.
+Después del cambio, comprobar la bienvenida, cerrar sesión y volver a entrar
+con la contraseña nueva. El Admin sigue en `http://127.0.0.1:8000/admin/`.
+
+Las pruebas automatizadas se ejecutan aparte con:
+
+```sh
+python manage.py test socios
+```
+
+El runner de Django crea una base PostgreSQL de pruebas y aplica allí las
+migraciones. Requiere que el usuario de PostgreSQL tenga permiso para crear esa
+base. No debe apuntarse su configuración `TEST` a la base local real.
+El usuario `0` de estas pruebas es ficticio, creado solo en esa base temporal;
+no se consulta ni modifica la cuenta `0` de desarrollo. La suite cubre acceso,
+cambio obligatorio, contraseñas inválidas, cuentas inactivas, separación del
+Admin, cierre de sesión, CSRF y conservación de la sesión.
 
 ## Estructura
 
@@ -61,8 +123,8 @@ No es necesario ejecutar `source .env`.
 
 Se ha generado un `.env` local con una `SECRET_KEY` aleatoria privada, `DEBUG=True`
 y los hosts locales permitidos. El archivo tiene permisos de lectura/escritura
-solo para su propietario y está excluido de Git. No contiene configuración de
-PostgreSQL; esa preparación queda para una fase posterior.
+solo para su propietario y está excluido de Git. La conexión local a PostgreSQL
+se configura con `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `PGHOST` y `PGPORT`.
 
 En otro equipo, copiar `.env.example` a `.env` y generar una clave privada propia.
 Los valores con espacios o caracteres especiales pueden ir entre comillas.
@@ -78,8 +140,8 @@ correspondiente. `check` no configura PostgreSQL ni aplica migraciones.
 
 ## Fases posteriores
 
-Acceso y administración de socios, catálogo, valoraciones, noticias y eventos,
-PWA, push e importación CSV se implementarán por separado.
+Catálogo, valoraciones, noticias y eventos, PWA, push e importación CSV
+se implementarán por separado.
 Las carpetas de plantillas y recursos vacías se conservan con `.gitkeep`.
 No hay manifiesto, service worker ni lógica PWA todavía.
 

@@ -8,7 +8,7 @@ from .models import Socio
 
 class SocioInline(admin.StackedInline):
     model = Socio
-    fields = ("nombre_completo", "telefono")
+    fields = ("nombre_completo", "telefono", "debe_cambiar_password")
     extra = 1
     max_num = 1
     can_delete = False
