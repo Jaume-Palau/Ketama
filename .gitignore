@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Variables de entorno y credenciales
+.env
+.env.*
+!.env.example
+
+# Bases de datos locales
+db.sqlite3
+*.sqlite3
+
+# Archivos subidos
+media/
+staticfiles/
+
+# Datos privados, importaciones y copias de seguridad
+*.csv
+*.dump
+*.sql
+backups/
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
