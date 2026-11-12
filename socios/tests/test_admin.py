@@ -35,15 +35,15 @@ class PerfilSocioAdminTests(SimpleTestCase):
         socio = perfil.save(commit=False)[0]
         self.assertEqual(socio.numero_socio, "00042")
 
-    def test_perfil_parcial_requiere_nombre_y_telefono(self):
-        for nombre, telefono, campo in (
-            ("Socio de prueba", "", "telefono"),
-            ("", "+34 600 000 000", "nombre_completo"),
-        ):
-            with self.subTest(campo=campo):
-                perfil = self.formset(nombre, telefono)
-                self.assertFalse(perfil.is_valid())
-                self.assertIn(campo, perfil.forms[0].errors)
+    def test_perfil_sin_telefono_valido(self):
+        perfil = self.formset("Socio de prueba", "")
+        self.assertTrue(perfil.is_valid(), perfil.errors)
+        self.assertEqual(perfil.save(commit=False)[0].telefono, "")
+
+    def test_perfil_requiere_nombre(self):
+        perfil = self.formset("", "+34 600 000 000")
+        self.assertFalse(perfil.is_valid())
+        self.assertIn("nombre_completo", perfil.forms[0].errors)
 
     def test_administrador_puede_crearse_sin_perfil(self):
         perfil = self.formset()

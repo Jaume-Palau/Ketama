@@ -28,3 +28,6 @@ backups/
 
 # VS Code
 .vscode/
+
+# Archivos CSV con datos de socios
+/*.csv

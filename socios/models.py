@@ -11,7 +11,7 @@ class Socio(models.Model):
         verbose_name="usuario",
     )
     nombre_completo = models.CharField("nombre completo", max_length=200)
-    telefono = models.CharField("teléfono", max_length=30)
+    telefono = models.CharField("teléfono", max_length=30, blank=True)
     debe_cambiar_password = models.BooleanField(
         "debe cambiar la contraseña", default=True
     )

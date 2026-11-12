@@ -16,7 +16,7 @@ La migración `0002_socio_debe_cambiar_password` está preparada sin aplicar.
 Tras revisar y aplicar la migración en una fase autorizada, los socios se
 gestionarán desde **Autenticación y autorización → Usuarios** en Django Admin.
 Al crear un usuario, indicar su número de socio en el nombre de usuario y
-rellenar el perfil con nombre completo y teléfono. El número conserva ceros
+rellenar el perfil con nombre completo y, opcionalmente, teléfono. El número conserva ceros
 iniciales y su unicidad la garantiza el usuario nativo.
 
 La contraseña se gestiona con los formularios estándar y el hash de Django.
@@ -25,7 +25,118 @@ socios deben mantener desmarcadas las opciones de personal y superusuario.
 El administrador puede existir sin perfil de socio. No se crean perfiles
 automáticamente para todas las cuentas existentes.
 
-La importación CSV queda pendiente. No se han añadido datos de socios reales.
+El comando de importación CSV está preparado; no se ha ejecutado ninguna
+importación real durante su desarrollo.
+
+## Importación inicial desde CSV
+
+El comando `importar_socios` lee directamente el archivo indicado, sin copiarlo.
+Requiere UTF-8 (admite BOM), separador `;` y exactamente las columnas `ESTADO`,
+`NºSocio`, `NOMBRE`, `APELLIDOS` y `TELEFONO` (pueden cambiar de orden).
+El CSV real debe permanecer fuera de Git; las reglas existentes de `.gitignore`
+excluyen los archivos CSV. El comando no cambia esas reglas ni añade archivos a Git.
+
+Simulación, sin escrituras en la base de datos:
+
+```sh
+source .venv/bin/activate
+python manage.py importar_socios "archivo_socios.csv" --dry-run
+```
+
+Sustituir el nombre de ejemplo por la ruta del archivo real. La simulación
+necesita acceso a PostgreSQL para detectar usuarios existentes. Muestra únicamente
+recuentos: filas, candidatos, inactivos, duplicados, errores y cuentas protegidas.
+
+Reglas aplicadas:
+
+- Solo `activo` y `caducado` crean cuentas habilitadas, sin permisos de personal
+  ni superusuario. Se ignoran espacios exteriores y mayúsculas en los estados.
+- `inactivo` y `expulsado` se omiten y suman al contador de descartados por
+  inactividad, sin considerarse errores ni crear cuentas.
+- Se unen nombre y apellidos, normalizando los espacios del nombre completo.
+  El teléfono se conserva como texto, incluidos ceros iniciales, signos y
+  espacios internos. El teléfono es opcional: una celda vacía o con espacios
+  se guarda como `""`, nunca como `NULL`. Las cinco columnas siguen siendo
+  obligatorias; número de socio, nombre y apellidos deben estar cumplimentados.
+- El número de socio debe contener dígitos ASCII y se conserva como texto,
+  incluidos ceros iniciales. `00125` y `125` son identificadores distintos.
+- Se descarta el número `0` siempre. No se actualizan cuentas existentes,
+  tengan o no perfil de socio, ni sus contraseñas, permisos o estado.
+- Ante duplicados dentro del CSV, se conserva la primera fila válida para
+  cada número; las repeticiones posteriores se cuentan como duplicados.
+- Se validan columnas, estado, campos vacíos, longitudes de los modelos,
+  caracteres de control y un nombre utilizable para la contraseña.
+  Las filas inactivas o expulsadas se descartan antes de validar sus datos personales.
+- La contraseña temporal utiliza el campo `NOMBRE` completo, la primera palabra
+  de `APELLIDOS` y el número de socio. La normalización Unicode elimina tildes y conserva solo letras y
+  dígitos ASCII en minúsculas: se eliminan espacios, guiones, apóstrofos y todos
+  los demás signos o caracteres que no produzcan letras/dígitos ASCII.
+  Por ejemplo, `NOMBRE=María`, `APELLIDOS=García López` y `125` producen `mariagarcia125`.
+  `NOMBRE=María José` conserva ambas palabras del nombre. Un apellido con guion
+  se considera una sola palabra y el guion se elimina al normalizar.
+  Solo se almacena su hash nativo de Django; nunca se imprime ni se exporta.
+- Cada perfil nuevo queda con `debe_cambiar_password=True`. Se mantiene el flujo
+  de cambio obligatorio existente sin modificarlo.
+
+La ejecución sin modo explícito falla. La aplicación requiere `--apply` en
+lugar de `--dry-run` y debe realizarse solo después de revisar la simulación.
+Si hay errores de validación, no se crea ninguna cuenta. Si no hay errores,
+se crean usuarios y perfiles en una única transacción; cualquier fallo
+inesperado revierte todas las altas de esa ejecución, incluida una colisión
+concurrente de un nombre de usuario. Los mensajes no incluyen datos personales.
+Una segunda importación omite las cuentas que ya existen.
+
+Pruebas del importador con datos ficticios:
+
+```sh
+python manage.py test socios.tests.test_importar_socios
+```
+
+El runner crea su propia base de pruebas PostgreSQL y aplica allí las
+migraciones; no debe configurarse para usar la base real. Los CSV ficticios
+de las pruebas se crean temporalmente dentro de Ketama y se eliminan al terminar.
+Estas pruebas no utilizan el archivo de socios real.
+
+## Actualizar contraseñas temporales ya importadas
+
+`actualizar_passwords_iniciales` utiliza el CSV original, sin modificarlo ni
+deducir el primer apellido del nombre completo de la base de datos. Comparte
+las validaciones del importador y requiere un modo explícito:
+
+```sh
+python manage.py actualizar_passwords_iniciales "archivo_socios.csv" --dry-run
+```
+
+Solo considera filas activas o caducadas y cuentas existentes con perfil y
+`debe_cambiar_password=True`. Excluye el número `0`, personal y superusuarios,
+cuentas sin perfil y socios que ya cambiaron la contraseña. No crea usuarios,
+no modifica datos de perfiles, permisos ni el indicador de cambio pendiente.
+No hay un número fijo de 409 actualizaciones: el recuento depende de las cuentas
+que sigan siendo elegibles cuando se ejecute.
+
+La simulación solo consulta y muestra recuentos. Si una cuenta ya tiene la
+contraseña del nuevo formato, se omite sin reescribir su hash. No se muestran
+nombres, teléfonos, contraseñas ni hashes.
+
+Solo después de revisar la simulación, se puede autorizar la operación con:
+
+```sh
+python manage.py actualizar_passwords_iniciales "archivo_socios.csv" --apply
+```
+
+Las actualizaciones usan `set_password`, se realizan en una única transacción y
+revalidan cuentas y perfiles bajo bloqueo. Los errores del CSV bloquean la
+aplicación y un fallo inesperado revierte todas las actualizaciones. Los socios
+afectados siguen obligados a cambiar la contraseña; sus sesiones anteriores
+quedan invalidadas por el mecanismo nativo de Django al cambiar el hash.
+
+Pruebas con datos ficticios (el runner utiliza su propia base de pruebas):
+
+```sh
+python manage.py test socios.tests.test_importar_socios socios.tests.test_actualizar_passwords_iniciales
+```
+
+No se ha ejecutado ninguna actualización real durante esta implementación.
 
 ## Autenticación de socios
 
@@ -140,7 +251,7 @@ correspondiente. `check` no configura PostgreSQL ni aplica migraciones.
 
 ## Fases posteriores
 
-Catálogo, valoraciones, noticias y eventos, PWA, push e importación CSV
+Catálogo, valoraciones, noticias y eventos, PWA y push
 se implementarán por separado.
 Las carpetas de plantillas y recursos vacías se conservan con `.gitkeep`.
 No hay manifiesto, service worker ni lógica PWA todavía.
