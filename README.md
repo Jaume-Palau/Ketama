@@ -188,6 +188,47 @@ python manage.py test socios.tests.test_importar_socios socios.tests.test_actual
 
 No se ha ejecutado ninguna actualización real durante esta implementación.
 
+## Valoraciones de genéticas
+
+`geneticas.Valoracion` relaciona un socio con una genética, una puntuación entera
+de 1 a 5 y la fecha automática de creación. La combinación socio–genética es
+única en PostgreSQL; otra restricción SQL impide guardar puntuaciones fuera del
+rango, incluido 0. Si el socio no ha valorado, no existe registro.
+
+Solo los socios en estado `activo` con cuenta habilitada pueden crear o modificar
+valoraciones. `save()` ejecuta la validación completa y bloquea la fila del socio
+durante la operación para comprobar su estado actual. Una valoración existente
+mantiene su socio, genética y fecha; se puede modificar su puntuación mediante
+`save()` o `update_or_create()`. Las operaciones `update()`, `bulk_create()` y
+`bulk_update()` se rechazan porque eluden la validación de `save()`.
+
+Caducar un socio o desactivar una genética no elimina sus votos. Las agregaciones
+incluyen estos votos históricos. `genetica.resumen_valoraciones()` devuelve
+`{"media": ..., "numero": ...}` mediante `Avg` y `Count` en una consulta.
+También están disponibles las propiedades `puntuacion_media` y
+`numero_valoraciones`. Sin votos, la media y el número son 0. No se almacena
+la media en la tabla de genéticas.
+
+El Admin permite consultar las valoraciones en modo de solo lectura. No hay
+vistas, formularios públicos, endpoints, estrellas visuales ni rankings.
+La migración `geneticas/0002_valoracion.py` está preparada sin aplicar y depende
+de `socios/0004_socio_estado.py`.
+
+Comprobaciones locales:
+
+```sh
+python manage.py check
+python manage.py makemigrations geneticas --check --dry-run
+python manage.py test geneticas
+```
+
+Las pruebas de valoraciones utilizan una base de pruebas PostgreSQL, donde el
+runner aplica las migraciones. No deben ejecutarse con una configuración `TEST`
+que apunte a la base real. Tras revisar el plan, la aplicación manual se realiza
+con `python manage.py migrate geneticas`; este comando también puede aplicar
+dependencias pendientes de `socios`, cuyo estado inicial es `caducado`.
+No se han ejecutado migraciones sobre PostgreSQL real durante esta implementación.
+
 ## Autenticación de socios
 
 - `/acceso/`: número de socio (`User.username`) y contraseña, mediante
