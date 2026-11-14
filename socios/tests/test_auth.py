@@ -20,6 +20,7 @@ class AutenticacionSociosTests(TestCase):
             usuario=cls.usuario,
             nombre_completo="Socio de prueba",
             telefono="600000000",
+            estado=Socio.Estado.ACTIVO,
         )
         cls.sin_perfil = User.objects.create_user(
             username="sin-perfil", password=cls.password_inicial

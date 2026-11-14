@@ -8,7 +8,7 @@ from .models import Socio
 
 class SocioInline(admin.StackedInline):
     model = Socio
-    fields = ("nombre_completo", "telefono", "debe_cambiar_password")
+    fields = ("nombre_completo", "telefono", "estado", "debe_cambiar_password")
     extra = 1
     max_num = 1
     can_delete = False
@@ -21,9 +21,9 @@ admin.site.unregister(User)
 @admin.register(User)
 class UsuarioAdmin(UserAdmin):
     inlines = (SocioInline,)
-    list_display = ("username", "nombre_socio", "is_active", "is_staff")
+    list_display = ("username", "nombre_socio", "estado_socio", "is_active", "is_staff")
     search_fields = ("username", "socio__nombre_completo", "socio__telefono")
-    list_filter = ("is_active", "is_staff")
+    list_filter = ("socio__estado", "is_active", "is_staff")
     list_select_related = ("socio",)
     fieldsets = (
         (None, {"fields": ("username", "password")}),
@@ -44,5 +44,12 @@ class UsuarioAdmin(UserAdmin):
     def nombre_socio(self, obj):
         try:
             return obj.socio.nombre_completo
+        except Socio.DoesNotExist:
+            return "—"
+
+    @admin.display(description="Estado del socio", ordering="socio__estado")
+    def estado_socio(self, obj):
+        try:
+            return obj.socio.get_estado_display()
         except Socio.DoesNotExist:
             return "—"

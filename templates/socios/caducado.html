@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Cuota caducada · Ketama{% endblock %}
+{% block content %}
+<p>Tu cuota de socio está caducada. Contacta con el club para renovarla</p>
+<form method="post" action="{% url 'socios:logout' %}">
+    {% csrf_token %}
+    <button type="submit">Cerrar sesión</button>
+</form>
+{% endblock %}

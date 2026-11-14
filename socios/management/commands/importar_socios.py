@@ -21,6 +21,7 @@ class FilaSocio(NamedTuple):
     telefono: str
     nombre: str
     apellidos: str
+    estado: str
 
 
 def normalizar_nombre(nombre):
@@ -34,11 +35,11 @@ def generar_password_inicial(nombre, apellidos, numero):
     return normalizar_nombre(nombre + apellidos.split()[0]) + numero
 
 
-def leer_csv(ruta):
+def leer_csv(ruta, *, rechazar_estados_contradictorios=False):
     """Valida todo el archivo antes de consultar o modificar cuentas."""
     filas = []
     resumen = Counter()
-    vistos = set()
+    vistos = {}
     max_usuario = User._meta.get_field("username").max_length
     max_nombre = Socio._meta.get_field("nombre_completo").max_length
     max_telefono = Socio._meta.get_field("telefono").max_length
@@ -93,11 +94,13 @@ def leer_csv(ruta):
                     continue
                 if numero in vistos:
                     resumen["duplicados"] += 1
+                    if rechazar_estados_contradictorios and vistos[numero] != estado:
+                        resumen["errores"] += 1
                     continue
-                vistos.add(numero)
+                vistos[numero] = estado
                 filas.append(FilaSocio(
                     numero, nombre, telefono,
-                    fila["NOMBRE"].strip(), fila["APELLIDOS"].strip(),
+                    fila["NOMBRE"].strip(), fila["APELLIDOS"].strip(), estado,
                 ))
     except (OSError, UnicodeError, csv.Error):
         raise CommandError(
@@ -168,6 +171,7 @@ class Command(BaseCommand):
                         nombre_completo=fila.nombre_completo,
                         telefono=fila.telefono,
                         debe_cambiar_password=True,
+                        estado=fila.estado,
                     )
         except Exception:
             # No incluir excepciones del ORM: podrían contener datos personales.

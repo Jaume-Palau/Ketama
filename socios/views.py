@@ -6,6 +6,7 @@ from django.urls import reverse_lazy
 from django.views.decorators.http import require_safe
 
 from .forms import AccesoSocioForm, CambioPasswordSocioForm
+from .models import Socio
 
 
 class AccesoSocioView(LoginView):
@@ -16,6 +17,8 @@ class AccesoSocioView(LoginView):
         # Destino fijo: no se permite saltar el control con ?next=, ni ir al Admin.
         if self.request.user.socio.debe_cambiar_password:
             return str(reverse_lazy("socios:cambiar_password"))
+        if self.request.user.socio.estado != Socio.Estado.ACTIVO:
+            return str(reverse_lazy("socios:caducado"))
         return str(reverse_lazy("socios:inicio"))
 
 
@@ -23,6 +26,11 @@ class CambioPasswordSocioView(PasswordChangeView):
     template_name = "socios/cambiar_password.html"
     form_class = CambioPasswordSocioForm
     success_url = reverse_lazy("socios:inicio")
+
+    def get_success_url(self):
+        if self.request.socio.estado != Socio.Estado.ACTIVO:
+            return str(reverse_lazy("socios:caducado"))
+        return super().get_success_url()
 
     def form_valid(self, form):
         with transaction.atomic():
@@ -44,3 +52,8 @@ class SalidaSocioView(LogoutView):
 @require_safe
 def inicio(request):
     return render(request, "socios/inicio.html", {"socio": request.socio})
+
+
+@require_safe
+def caducado(request):
+    return render(request, "socios/caducado.html")

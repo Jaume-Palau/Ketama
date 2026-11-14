@@ -97,6 +97,10 @@ class ImportarSociosTests(TestCase):
         self.assertEqual(usuario.socio.nombre_completo, "María García López")
         self.assertEqual(usuario.socio.telefono, "001234567")
         self.assertTrue(usuario.socio.debe_cambiar_password)
+        self.assertEqual(usuario.socio.estado, Socio.Estado.ACTIVO)
+        self.assertEqual(
+            User.objects.get(username="00126").socio.estado, Socio.Estado.CADUCADO
+        )
         self.assertTrue(
             User.objects.get(username="00126").check_password("anamariadavila00126")
         )

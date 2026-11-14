@@ -4,6 +4,10 @@ from django.db import models
 
 
 class Socio(models.Model):
+    class Estado(models.TextChoices):
+        ACTIVO = "activo", "Activo"
+        CADUCADO = "caducado", "Caducado"
+
     usuario = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -12,6 +16,9 @@ class Socio(models.Model):
     )
     nombre_completo = models.CharField("nombre completo", max_length=200)
     telefono = models.CharField("teléfono", max_length=30, blank=True)
+    estado = models.CharField(
+        "estado", max_length=8, choices=Estado.choices, default=Estado.CADUCADO
+    )
     debe_cambiar_password = models.BooleanField(
         "debe cambiar la contraseña", default=True
     )

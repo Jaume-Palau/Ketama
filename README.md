@@ -9,7 +9,7 @@ Está creado el esqueleto y el modelo `Socio`, vinculado al usuario nativo de
 Django. `geneticas` y `comunicacion` aún no tienen funcionalidades.
 El espacio de socios incluye acceso, cambio de contraseña, cierre de sesión y
 una bienvenida provisional. El panel de gestión conserva su entrada `/admin/`.
-La migración `0002_socio_debe_cambiar_password` está preparada sin aplicar.
+La migración `0004_socio_estado` está preparada sin aplicar.
 
 ## Gestión de socios
 
@@ -24,6 +24,20 @@ La casilla **Activo** habilita o deshabilita la autenticación. Las cuentas de
 socios deben mantener desmarcadas las opciones de personal y superusuario.
 El administrador puede existir sin perfil de socio. No se crean perfiles
 automáticamente para todas las cuentas existentes.
+
+El perfil tiene un **Estado del socio** independiente de la casilla **Activo**
+del usuario: `activo` permite usar la aplicación y `caducado` permite iniciar
+sesión pero solo muestra el aviso de cuota caducada, después del cambio obligatorio
+de contraseña si está pendiente. Para renovar manualmente, editar el usuario en
+Admin y cambiar el estado de su perfil a `activo`. No hace falta cambiar su
+contraseña ni deshabilitar/habilitar su cuenta. La lista de usuarios muestra y
+filtra este estado. El acceso administrativo mantiene sus permisos habituales.
+
+Por seguridad, el valor inicial del estado es `caducado`. Al aplicar la migración,
+todos los perfiles existentes quedan restringidos hasta revisar su estado o
+recuperarlo del CSV. No se modifica ningún otro dato ni hash de contraseña.
+Este control sustituye la regla inicial que solo usaba el estado como filtro;
+no se implementan fechas de caducidad, pagos ni renovación automática.
 
 El comando de importación CSV está preparado; no se ha ejecutado ninguna
 importación real durante su desarrollo.
@@ -51,6 +65,8 @@ Reglas aplicadas:
 
 - Solo `activo` y `caducado` crean cuentas habilitadas, sin permisos de personal
   ni superusuario. Se ignoran espacios exteriores y mayúsculas en los estados.
+  El estado del CSV se conserva en `Socio.estado`; la caducidad no cambia
+  `User.is_active` ni impide iniciar sesión.
 - `inactivo` y `expulsado` se omiten y suman al contador de descartados por
   inactividad, sin considerarse errores ni crear cuentas.
 - Se unen nombre y apellidos, normalizando los espacios del nombre completo.
@@ -96,6 +112,40 @@ El runner crea su propia base de pruebas PostgreSQL y aplica allí las
 migraciones; no debe configurarse para usar la base real. Los CSV ficticios
 de las pruebas se crean temporalmente dentro de Ketama y se eliminan al terminar.
 Estas pruebas no utilizan el archivo de socios real.
+
+## Recuperar estados de cuentas ya importadas
+
+El comando independiente `asignar_estados_socios` consulta el CSV original y
+localiza cuentas existentes por número de socio. No crea usuarios ni perfiles;
+solo actualiza `Socio.estado`. Conserva nombres, teléfonos, contraseñas, permisos,
+habilitación de la cuenta e indicador de cambio de contraseña.
+Excluye administradores, personal y el número `0`, y descarta filas inactivas o
+expulsadas. Los recuentos no están fijados en 409: dependen de las cuentas reales.
+
+Tras revisar y aplicar manualmente la migración, simular sin escrituras:
+
+```sh
+python manage.py asignar_estados_socios "archivo_socios.csv" --dry-run
+```
+
+El resultado solo muestra recuentos por estado de destino, cambios necesarios,
+cuentas omitidas y errores. No muestra datos personales ni contraseñas.
+Las cuentas cuyo estado ya coincide no se reescriben. Los errores de validación
+o dos filas válidas con estados activo/caducado contradictorios para el mismo
+número bloquean la aplicación. Los duplicados coincidentes se omiten.
+
+Solo después de revisar la simulación se puede autorizar la asignación:
+
+```sh
+python manage.py asignar_estados_socios "archivo_socios.csv" --apply
+```
+
+La operación es transaccional: cualquier fallo inesperado revierte todos sus
+cambios. Es una recuperación inicial manual, sin tareas programadas ni
+sincronización posterior con el CSV. Después se gestiona el estado en Admin;
+reaplicar manualmente el CSV podría sustituir estados ya renovados en Admin.
+El socio ficticio `0` queda excluido del comando: para probar como activo,
+el administrador debe revisar y asignar manualmente su estado en el perfil.
 
 ## Actualizar contraseñas temporales ya importadas
 
@@ -144,7 +194,8 @@ No se ha ejecutado ninguna actualización real durante esta implementación.
   `AuthenticationForm` y `LoginView` de Django.
 - `/cambiar-password/`: contraseña actual y nueva contraseña confirmada,
   mediante `PasswordChangeForm` y `PasswordChangeView`.
-- `/`: bienvenida provisional, disponible después del cambio obligatorio.
+- `/`: bienvenida provisional, disponible para socios activos después del cambio obligatorio.
+- `/cuota-caducada/`: aviso «Tu cuota de socio está caducada. Contacta con el club para renovarla».
 - `/salir/`: cierre de sesión mediante POST con token CSRF.
 
 `Socio.debe_cambiar_password` vale `True` por defecto. La migración añade el
@@ -154,10 +205,14 @@ Solo un cambio válido de contraseña lo desmarca desde el espacio de socios.
 La nueva contraseña debe superar los validadores de Django y ser distinta de
 la actual. El cambio conserva la sesión mediante el mecanismo nativo de Django.
 
-`AccesoSociosMiddleware` protege todas las rutas del namespace `socios`:
-exige cuenta activa con perfil, rechaza personal y superusuarios, y fuerza el
-cambio pendiente antes de acceder a páginas privadas. Las futuras páginas
-privadas deben seguir este mismo control de acceso. Los destinos `next` del
+`AccesoSociosMiddleware` protege las rutas de los namespaces `socios`, `geneticas`
+y `comunicacion`, también si se accede directamente mediante GET o POST:
+exige cuenta habilitada con perfil, rechaza personal y superusuarios, y fuerza
+el cambio pendiente antes de acceder a páginas privadas. Después permite las
+funcionalidades solo si `Socio.estado` es `activo`; en otro caso redirige al
+aviso de cuota caducada. El cambio de contraseña y el cierre de sesión siguen
+disponibles para ambos estados. Las futuras páginas privadas deben mantener
+estos namespaces o incorporarse explícitamente al control. Los destinos `next` del
 login se ignoran para evitar saltos al Admin o fuera del flujo obligatorio.
 Las respuestas de socios llevan cabeceras para evitar su almacenamiento en caché.
 
@@ -186,7 +241,9 @@ redirige al cambio y que se puede cerrar sesión sin completarlo.
 
 La prueba manual completa implica establecer voluntariamente una contraseña
 nueva desde el formulario; esta implementación no realiza ese cambio por sí sola.
-Después del cambio, comprobar la bienvenida, cerrar sesión y volver a entrar
+Para comprobar la bienvenida, el perfil de prueba debe estar en estado `activo`
+(asignado manualmente en Admin). Si está caducado, debe aparecer únicamente el
+aviso de cuota y el cierre de sesión. Después, cerrar sesión y volver a entrar
 con la contraseña nueva. El Admin sigue en `http://127.0.0.1:8000/admin/`.
 
 Las pruebas automatizadas se ejecutan aparte con:
