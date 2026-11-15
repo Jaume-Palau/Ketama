@@ -45,9 +45,36 @@
 .detalle-mi-valoracion { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem 1rem; margin-top: 1.5rem; padding: 1rem; border: 1px solid #7bef96; border-radius: 1.1rem; background: radial-gradient(ellipse at 30% 0, #0c522a50, transparent 80%), #09201670; box-shadow: 0 0 25px #57ed7712, inset 0 0 14px #51dd7c0a; }
 .detalle-mi-valoracion h2 { margin-bottom: .25rem; }
 .detalle-mi-valoracion p { margin: 0; color: #d2d8d7; font-size: .85rem; line-height: 1.5; }
-.detalle-estrellas-lectura { display: flex; gap: .15rem; font-size: 2.2rem; line-height: 1; color: #a4b0ae; user-select: none; }
-.detalle-estrellas-lectura .puntuada { color: #7bf291; text-shadow: 0 0 15px #5cef8160; }
-.detalle-mi-valoracion .detalle-votacion-pendiente { flex-basis: 100%; color: #a6b3ad; font-size: .75rem; }
+#tu-valoracion { scroll-margin-top: 1rem; }
+.detalle-form-valoracion { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem; width: 100%; margin: 0; }
+.valoracion-campo { flex: 1; min-width: 0; border: 0; margin: 0; padding: 0; }
+.valoracion-estrellas { display: flex; align-items: center; gap: .2rem; width: max-content; max-width: 100%; }
+.valoracion-opcion { position: relative; }
+.detalle-form-valoracion .valoracion-radio { position: absolute; width: 1px; height: 1px; padding: 0; margin: 0; overflow: hidden; clip-path: inset(50%); border: 0; }
+.valoracion-opcion label { display: grid; place-items: center; width: 2.8rem; min-height: 3rem; margin: 0; border: 1px solid transparent; border-radius: .5rem; cursor: pointer; font-size: 2.6rem; line-height: 1; color: #b0c1b7; user-select: none; }
+.valoracion-opcion label .estrella-vacia, .valoracion-opcion label .estrella-rellena { grid-area: 1 / 1; }
+.valoracion-opcion .estrella-rellena { opacity: 0; color: #7bf291; text-shadow: 0 0 15px #5cef8160; }
+.valoracion-radio:checked + label { border-color: #73d98b; background: #76f6920c; }
+.valoracion-radio:focus-visible + label { outline: 3px solid var(--lila); outline-offset: 3px; }
+.valoracion-opcion label:hover { background: #a2ff9e12; }
+.detalle-form-valoracion:has(input[value="1"]:checked) .valoracion-opcion:nth-child(-n+1) .estrella-rellena,
+.detalle-form-valoracion:has(input[value="2"]:checked) .valoracion-opcion:nth-child(-n+2) .estrella-rellena,
+.detalle-form-valoracion:has(input[value="3"]:checked) .valoracion-opcion:nth-child(-n+3) .estrella-rellena,
+.detalle-form-valoracion:has(input[value="4"]:checked) .valoracion-opcion:nth-child(-n+4) .estrella-rellena,
+.detalle-form-valoracion:has(input[value="5"]:checked) .valoracion-opcion:nth-child(-n+5) .estrella-rellena { opacity: 1; }
+.detalle-form-valoracion .valoracion-seleccion { margin-top: .45rem; color: #cae4d1; font-size: .8rem; }
+.valoracion-seleccion > span { display: none; }
+.valoracion-seleccion .seleccion-vacia { display: inline; }
+.detalle-form-valoracion:has(input:checked) .seleccion-vacia { display: none; }
+.detalle-form-valoracion:has(input[value="1"]:checked) .seleccion-1,
+.detalle-form-valoracion:has(input[value="2"]:checked) .seleccion-2,
+.detalle-form-valoracion:has(input[value="3"]:checked) .seleccion-3,
+.detalle-form-valoracion:has(input[value="4"]:checked) .seleccion-4,
+.detalle-form-valoracion:has(input[value="5"]:checked) .seleccion-5 { display: inline; }
+.detalle-form-valoracion .valoracion-guardar { width: 100%; min-height: 2.9rem; padding: .7rem 1rem; border: 1px solid #a2ffa5; border-radius: .7rem; background: linear-gradient(115deg, #88ed80, #66d99b); color: #092017; font-weight: 750; box-shadow: 0 0 20px #6ef39222; }
+.detalle-form-valoracion .valoracion-guardar:hover { background: linear-gradient(115deg, #abfa8c, #7cedb5); }
+.detalle-form-valoracion .errorlist { color: #ffb7cb; padding-left: 1.2rem; font-size: .85rem; }
+.detalle-mi-valoracion .valoracion-confirmacion { flex-basis: 100%; padding: .7rem .85rem; border: 1px solid #78e59c; border-radius: .6rem; background: #19543366; color: #d3ffdb; }
 @media (min-width: 440px) {
     .detalle-datos { grid-template-columns: 1.1fr 1fr 1fr; }
     .detalle-dato { padding: .7rem .6rem; gap: .3rem; }
@@ -61,5 +88,5 @@
     .detalle-dato { padding: .8rem; }
     .detalle-dato dd { font-size: 1.4rem; }
     .detalle-dato-precio dd { font-size: 1.6rem; }
-    .detalle-estrellas-lectura { font-size: 2.5rem; }
+    .detalle-form-valoracion .valoracion-guardar { width: auto; min-width: 12rem; }
 }

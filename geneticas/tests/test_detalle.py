@@ -111,12 +111,13 @@ class DetalleTests(TestCase):
         self.assertContains(response, 'href="' + enlace + '"')
         self.assertContains(response, f'data-ficha-genetica="tarjeta-{self.genetica.pk}"')
 
-    def test_valoraciones_son_solo_lectura_y_no_hay_secciones_ficticias(self):
+    def test_formulario_de_valoracion_y_navegacion_sin_secciones_ficticias(self):
         response = self.client.get(self.url())
         self.assertContains(response, "Tu puntuación actual: 5 de 5.")
-        self.assertContains(response, "La votación y la edición estarán disponibles próximamente.")
+        self.assertContains(response, "Guardar valoración")
         self.assertContains(response, 'aria-disabled="true"', count=2)
-        self.assertNotContains(response, 'name="puntuacion"')
+        self.assertContains(response, 'name="puntuacion"', count=5)
+        self.assertContains(response, 'action="' + reverse("geneticas:valorar", args=[self.genetica.pk]))
         self.assertNotContains(response, "Carrito")
         self.assertNotContains(response, ">Inicio<")
         self.assertEqual(self.client.post(self.url(), {"puntuacion": 1}).status_code, 405)

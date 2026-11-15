@@ -1,11 +1,19 @@
-"""Catálogo y fichas privadas de genéticas; consultas sin escrituras."""
+"""Catálogo, fichas privadas y envío de valoraciones de los socios."""
+from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import transaction
 from django.db.models import Avg, Count, F, Max, Q
 from django.http import QueryDict
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_safe
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.http import require_POST, require_safe
 
-from .models import Genetica
+from socios.models import Socio
+
+from .forms import ValoracionForm
+from .models import Genetica, Valoracion
 
 
 def opciones_catalogo(request):
@@ -72,6 +80,10 @@ def catalogo(request):
 
 @require_safe
 def detalle(request, pk):
+    return renderizar_detalle(request, pk)
+
+
+def renderizar_detalle(request, pk, formulario=None, status=200):
     agregaciones = {
         "media_catalogo": Avg("valoraciones__puntuacion"),
         "votos_catalogo": Count("valoraciones"),
@@ -96,7 +108,43 @@ def detalle(request, pk):
         })
     parametros = consulta_catalogo(*opciones_catalogo(request))
     volver = f"{reverse('geneticas:catalogo')}?{parametros.urlencode()}#tarjeta-{genetica.pk}"
+    if formulario is None:
+        formulario = ValoracionForm(initial={"puntuacion": genetica.mi_puntuacion})
     return render(request, "geneticas/detalle.html", {
         "genetica": genetica, "distribucion": distribucion,
         "estrellas": range(1, 6), "volver_catalogo": volver, "es_detalle": True,
-    })
+        "form_valoracion": formulario,
+        "valorar_url": f"{reverse('geneticas:valorar', args=[genetica.pk])}?{parametros.urlencode()}#tu-valoracion",
+    }, status=status)
+
+
+@require_POST
+@csrf_protect
+def valorar(request, pk):
+    formulario = ValoracionForm(request.POST)
+    if not formulario.is_valid():
+        return renderizar_detalle(request, pk, formulario, status=400)
+    try:
+        with transaction.atomic():
+            # Revalidar bajo bloqueo para no guardar si cambian los permisos
+            # después de que el middleware haya autorizado la petición.
+            usuario = get_user_model().objects.select_for_update().get(pk=request.user.pk)
+            socio = Socio.objects.select_for_update().get(pk=request.socio.pk, usuario=usuario)
+            if (
+                not usuario.is_active or usuario.is_staff or usuario.is_superuser
+                or socio.estado != Socio.Estado.ACTIVO or socio.debe_cambiar_password
+            ):
+                raise PermissionDenied
+            genetica = get_object_or_404(
+                Genetica.objects.select_for_update().filter(activo=True), pk=pk
+            )
+            Valoracion.objects.update_or_create(
+                socio=socio, genetica=genetica,
+                defaults={"puntuacion": formulario.cleaned_data["puntuacion"]},
+            )
+    except ValidationError:
+        formulario.add_error(None, "No se pudo guardar la valoración. Revisa los datos e inténtalo de nuevo.")
+        return renderizar_detalle(request, pk, formulario, status=400)
+    messages.success(request, "Tu valoración se ha guardado.")
+    parametros = consulta_catalogo(*opciones_catalogo(request))
+    return redirect(f"{reverse('geneticas:detalle', args=[pk])}?{parametros.urlencode()}#tu-valoracion")

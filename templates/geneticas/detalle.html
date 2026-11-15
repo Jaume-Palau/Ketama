@@ -67,13 +67,36 @@
         </ol>
     </section>
 
-    <section class="detalle-mi-valoracion" aria-labelledby="detalle-mi-valoracion-titulo">
+    <section id="tu-valoracion" class="detalle-mi-valoracion" aria-labelledby="detalle-mi-valoracion-titulo">
         <div>
             <h2 id="detalle-mi-valoracion-titulo">Tu valoración</h2>
             {% if genetica.mi_puntuacion %}<p>Tu puntuación actual: {{ genetica.mi_puntuacion }} de 5.</p>{% else %}<p>Aún no has valorado esta genética.</p>{% endif %}
         </div>
-        <div class="detalle-estrellas-lectura" aria-hidden="true">{% for estrella in estrellas %}<span{% if genetica.mi_puntuacion and estrella <= genetica.mi_puntuacion %} class="puntuada"{% endif %}>{% if genetica.mi_puntuacion and estrella <= genetica.mi_puntuacion %}★{% else %}☆{% endif %}</span>{% endfor %}</div>
-        <p class="detalle-votacion-pendiente">La votación y la edición estarán disponibles próximamente.</p>
+        {% for mensaje in messages %}<p class="valoracion-confirmacion" role="status">{{ mensaje }}</p>{% endfor %}
+        <form class="detalle-form-valoracion" method="post" action="{{ valorar_url }}">
+            {% csrf_token %}
+            {{ form_valoracion.non_field_errors }}
+            {% if form_valoracion.puntuacion.errors %}<div id="valoracion-error" role="alert">{{ form_valoracion.puntuacion.errors }}</div>{% endif %}
+            <fieldset class="valoracion-campo"{% if form_valoracion.puntuacion.errors %} aria-describedby="valoracion-error"{% endif %}>
+                <legend class="catalogo-solo-lector">Selecciona tu puntuación de 1 a 5 estrellas</legend>
+                <div class="valoracion-estrellas">
+                    {% for estrella in estrellas %}
+                    <div class="valoracion-opcion">
+                        <input class="valoracion-radio" type="radio" id="puntuacion-{{ estrella }}" name="puntuacion" value="{{ estrella }}" required{% if form_valoracion.puntuacion.value|stringformat:"s" == estrella|stringformat:"s" %} checked{% endif %}{% if form_valoracion.puntuacion.errors %} aria-invalid="true"{% endif %}>
+                        <label for="puntuacion-{{ estrella }}">
+                            <span class="estrella-vacia" aria-hidden="true">☆</span><span class="estrella-rellena" aria-hidden="true">★</span>
+                            <span class="catalogo-solo-lector">{{ estrella }} estrella{{ estrella|pluralize }}</span>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p class="valoracion-seleccion" aria-live="polite">
+                    <span class="seleccion-vacia">Selecciona de 1 a 5 estrellas.</span>
+                    {% for estrella in estrellas %}<span class="seleccion-{{ estrella }}">Valoración seleccionada: {{ estrella }} de 5.</span>{% endfor %}
+                </p>
+            </fieldset>
+            <button class="valoracion-guardar" type="submit">Guardar valoración</button>
+        </form>
     </section>
 </article>
 {% endblock %}

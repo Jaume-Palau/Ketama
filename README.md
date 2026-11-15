@@ -210,8 +210,8 @@ También están disponibles las propiedades `puntuacion_media` y
 la media en la tabla de genéticas.
 
 El Admin permite consultar las valoraciones en modo de solo lectura. El catálogo
-muestra la media y el número de votos, pero aún no hay formulario de votación,
-endpoints para enviar votos ni rankings independientes.
+muestra la media y el número de votos, y la ficha permite guardar o modificar
+la puntuación del socio. No hay rankings independientes.
 La migración `geneticas/0002_valoracion.py` está preparada sin aplicar y depende
 de `socios/0004_socio_estado.py`.
 
@@ -291,9 +291,24 @@ siguen deshabilitadas. No se añaden Inicio, Carrito ni favoritos.
 
 La ficha obtiene en una sola consulta la media, el total de votos, el reparto
 de 5 a 1 estrellas y, si existe, la puntuación del socio autenticado. Todos son
-datos persistidos, sin números de ejemplo. La sección «Tu valoración» es solo
-de lectura e indica que votar/editar estará disponible después; no contiene
-formularios ni botones de votación. No se modifica ninguna valoración al abrirla.
+datos persistidos, sin números de ejemplo. La sección «Tu valoración» permite
+seleccionar de 1 a 5 estrellas enteras y pulsar «Guardar valoración». Abrir la
+ficha no modifica votos; solo se guardan mediante el envío explícito del formulario.
+
+El formulario usa controles de radio nativos, utilizables con teclado o pantalla
+táctil. El CSS muestra las estrellas seleccionadas y su valor, sin JavaScript ni
+AJAX adicionales. Si ya hay un voto, la puntuación guardada aparece seleccionada.
+`ValoracionForm` solo admite los cinco enteros válidos; los valores vacíos,
+fraccionarios o fuera de rango se rechazan en el servidor y muestran errores.
+
+`POST /catalogo/<id>/valorar/` exige CSRF y los permisos actuales. Identifica al
+socio por la sesión y a la genética por la URL, sin aceptar identidades enviadas
+por el formulario. Revalida usuario, estado, cambio de contraseña y genética activa
+bajo bloqueo en una transacción. Usa `update_or_create` y la validación del modelo
+para mantener un solo voto por socio y genética, conservando la fecha de creación.
+Tras guardar, redirige a la ficha con una confirmación junto al formulario y
+recalcula media, recuento y distribución. Refrescar ese GET no reenvía la valoración.
+Los parámetros de búsqueda, clasificación y ordenación se conservan.
 
 Precio, THC y CBD vacíos se muestran como no disponibles/informados, mientras que
 un 0 real se conserva. Una URL de imagen fallida muestra el mismo marcador que
@@ -310,18 +325,22 @@ y el ancla a la tarjeta, aunque no se restaura la posición exacta en píxeles.
 
 El middleware sigue protegiendo el acceso directo: cuenta habilitada, estado
 activo y cambio obligatorio de contraseña completado. Las genéticas inactivas
-o inexistentes devuelven 404 al socio autorizado. La vista admite solo GET/HEAD
-y sus respuestas no se guardan en caché.
+o inexistentes devuelven 404 al socio autorizado. La ficha admite solo GET/HEAD;
+el envío de valoraciones utiliza su URL POST independiente. Las respuestas
+mantienen las cabeceras que evitan el almacenamiento en caché.
 
 Para probar la navegación, iniciar el servidor con la base local ya preparada,
 entrar como socio activo, buscar/filtrar/ordenar el catálogo, desplazarse y abrir
 una tarjeta. Comprobar la ficha y regresar con «Volver al catálogo» y con Atrás
-del navegador. No se aplican migraciones ni se modifican datos para esta pantalla.
+del navegador. Para probar votos, usar un entorno destinado a pruebas: seleccionar
+estrellas, guardar y comprobar el resumen; cambiar la selección y verificar que
+el total de votos permanece igual. No se han ejecutado migraciones ni operaciones
+sobre la base real durante esta implementación.
 
 Pruebas de la nueva vista y regresiones del catálogo:
 
 ```sh
-python manage.py test geneticas.tests.test_detalle geneticas.tests.test_catalogo
+python manage.py test geneticas.tests.test_detalle geneticas.tests.test_catalogo geneticas.tests.test_votacion
 ```
 
 El runner usa su propia base PostgreSQL de pruebas y aplica allí las migraciones.
