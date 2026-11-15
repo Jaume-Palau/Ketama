@@ -40,7 +40,7 @@ class AccesoSociosMiddleware(MiddlewareMixin):
             if not acceso_basico and not es_aviso:
                 return redirect("socios:caducado")
         elif es_aviso:
-            return redirect("socios:inicio")
+            return redirect("geneticas:catalogo")
         return None
 
     def process_response(self, request, response):

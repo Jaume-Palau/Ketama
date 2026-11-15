@@ -83,14 +83,14 @@ class AutenticacionSociosTests(TestCase):
     def test_cambio_correcto_actualiza_hash_y_conserva_sesion(self):
         self.acceder()
         response = self.cambiar()
-        self.assertRedirects(response, reverse("socios:inicio"))
+        self.assertRedirects(response, reverse("geneticas:catalogo"))
         self.usuario.refresh_from_db()
         self.socio.refresh_from_db()
         self.assertFalse(self.socio.debe_cambiar_password)
         self.assertTrue(self.usuario.check_password(self.password_nueva))
         self.assertFalse(self.usuario.check_password(self.password_inicial))
         self.assertNotEqual(self.usuario.password, self.password_nueva)
-        self.assertContains(self.client.get(reverse("socios:inicio")), "Socio de prueba")
+        self.assertContains(self.client.get(reverse("geneticas:catalogo")), "Catálogo")
 
     def test_nueva_sesion_tras_cambio_acepta_solo_password_nueva(self):
         self.acceder()
@@ -99,7 +99,7 @@ class AutenticacionSociosTests(TestCase):
         self.assertEqual(self.acceder().status_code, 200)
         self.assertNotIn("_auth_user_id", self.client.session)
         self.assertRedirects(
-            self.acceder(password=self.password_nueva), reverse("socios:inicio")
+            self.acceder(password=self.password_nueva), reverse("geneticas:catalogo")
         )
 
     def test_cambios_invalidos_no_modifican_hash_ni_indicador(self):
@@ -126,7 +126,7 @@ class AutenticacionSociosTests(TestCase):
     def test_login_sin_cambio_pendiente_va_al_inicio(self):
         self.socio.debe_cambiar_password = False
         self.socio.save(update_fields=["debe_cambiar_password"])
-        self.assertRedirects(self.acceder(), reverse("socios:inicio"))
+        self.assertRedirects(self.acceder(), reverse("geneticas:catalogo"))
 
     def test_password_incorrecta_no_inicia_sesion(self):
         response = self.acceder(password="incorrecta")

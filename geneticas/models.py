@@ -19,6 +19,10 @@ class Genetica(models.Model):
         INTERIOR = "interior", "Interior"
         EXTERIOR = "exterior", "Exterior"
 
+    class UnidadPrecio(models.TextChoices):
+        GRAMO = "gramo", "Gramo"
+        UNIDAD = "unidad", "Unidad"
+
     nombre = models.CharField("nombre", max_length=200)
     imagen = models.URLField("URL de imagen", max_length=500, blank=True)
     clasificacion = models.CharField(
@@ -36,6 +40,14 @@ class Genetica(models.Model):
         "tipo de cultivo", max_length=10, choices=TipoCultivo.choices
     )
     descripcion = models.TextField("descripción")
+    precio = models.DecimalField(
+        "precio", max_digits=8, decimal_places=2, blank=True, null=True,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    unidad_precio = models.CharField(
+        "unidad del precio", max_length=6,
+        choices=UnidadPrecio.choices, default=UnidadPrecio.GRAMO,
+    )
     activo = models.BooleanField("activo", default=True)
 
     class Meta:
@@ -46,6 +58,10 @@ class Genetica(models.Model):
             models.CheckConstraint(
                 condition=models.Q(thc__gte=0, thc__lte=100) | models.Q(thc__isnull=True),
                 name="genetica_thc_entre_0_y_100",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(precio__gte=0) | models.Q(precio__isnull=True),
+                name="genetica_precio_no_negativo",
             ),
         ]
 

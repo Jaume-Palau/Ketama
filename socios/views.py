@@ -1,7 +1,7 @@
 """Acceso y página provisional de socios."""
 from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
 from django.db import transaction
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_safe
 
@@ -19,13 +19,13 @@ class AccesoSocioView(LoginView):
             return str(reverse_lazy("socios:cambiar_password"))
         if self.request.user.socio.estado != Socio.Estado.ACTIVO:
             return str(reverse_lazy("socios:caducado"))
-        return str(reverse_lazy("socios:inicio"))
+        return str(reverse_lazy("geneticas:catalogo"))
 
 
 class CambioPasswordSocioView(PasswordChangeView):
     template_name = "socios/cambiar_password.html"
     form_class = CambioPasswordSocioForm
-    success_url = reverse_lazy("socios:inicio")
+    success_url = reverse_lazy("geneticas:catalogo")
 
     def get_success_url(self):
         if self.request.socio.estado != Socio.Estado.ACTIVO:
@@ -51,7 +51,7 @@ class SalidaSocioView(LogoutView):
 
 @require_safe
 def inicio(request):
-    return render(request, "socios/inicio.html", {"socio": request.socio})
+    return redirect("geneticas:catalogo")
 
 
 @require_safe

@@ -46,7 +46,7 @@ class AccesoPorEstadoTests(TestCase):
 
     def test_urls_directas_y_post_quedan_bloqueados(self):
         self.acceder()
-        for nombre in ("socios:inicio", "geneticas:inicio", "geneticas:accion", "geneticas:login"):
+        for nombre in ("socios:inicio", "comunicacion:inicio", "comunicacion:accion", "comunicacion:login"):
             for metodo in (self.client.get, self.client.post):
                 with self.subTest(nombre=nombre, metodo=metodo.__name__):
                     self.assertRedirects(
@@ -57,7 +57,7 @@ class AccesoPorEstadoTests(TestCase):
         self.socio.debe_cambiar_password = True
         self.socio.save(update_fields=["debe_cambiar_password"])
         self.assertRedirects(self.acceder(), reverse("socios:cambiar_password"))
-        for nombre in ("socios:inicio", "socios:caducado", "geneticas:inicio"):
+        for nombre in ("socios:inicio", "socios:caducado", "comunicacion:inicio"):
             self.assertRedirects(
                 self.client.get(reverse(nombre)), reverse("socios:cambiar_password")
             )
@@ -77,15 +77,15 @@ class AccesoPorEstadoTests(TestCase):
         hash_anterior = self.usuario.password
         self.socio.estado = Socio.Estado.ACTIVO
         self.socio.save(update_fields=["estado"])
-        self.assertEqual(self.client.get(reverse("socios:inicio")).status_code, 200)
-        self.assertContains(self.client.get(reverse("geneticas:inicio")), "Funcionalidad privada")
+        self.assertRedirects(self.client.get(reverse("socios:inicio")), reverse("geneticas:catalogo"))
+        self.assertContains(self.client.get(reverse("comunicacion:inicio")), "Funcionalidad privada")
         self.assertRedirects(
-            self.client.get(reverse("socios:caducado")), reverse("socios:inicio")
+            self.client.get(reverse("socios:caducado")), reverse("geneticas:catalogo")
         )
         self.socio.estado = Socio.Estado.CADUCADO
         self.socio.save(update_fields=["estado"])
         self.assertRedirects(
-            self.client.get(reverse("geneticas:inicio")), reverse("socios:caducado")
+            self.client.get(reverse("comunicacion:inicio")), reverse("socios:caducado")
         )
         self.usuario.refresh_from_db()
         self.assertTrue(self.usuario.is_active)
@@ -94,7 +94,7 @@ class AccesoPorEstadoTests(TestCase):
     def test_activo_sin_cambio_pendiente_entra_normalmente(self):
         self.socio.estado = Socio.Estado.ACTIVO
         self.socio.save(update_fields=["estado"])
-        self.assertRedirects(self.acceder(), reverse("socios:inicio"))
+        self.assertRedirects(self.acceder(), reverse("geneticas:catalogo"))
 
     def test_caducado_puede_cerrar_sesion(self):
         self.acceder()
@@ -147,7 +147,7 @@ class AccesoPorEstadoTests(TestCase):
         self.assertTrue(self.usuario.is_active)
 
     def test_anonimo_no_puede_abrir_aviso_ni_catalogo(self):
-        for nombre in ("socios:caducado", "geneticas:inicio"):
+        for nombre in ("socios:caducado", "comunicacion:inicio"):
             response = self.client.get(reverse(nombre))
             self.assertEqual(response.status_code, 302)
             self.assertTrue(response.url.startswith(reverse("socios:login")))

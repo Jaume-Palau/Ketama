@@ -14,6 +14,6 @@ urlpatterns = [
         path("", privada, name="inicio"),
         path("accion/", privada, name="accion"),
         path("login/", privada, name="login"),
-    ], "geneticas"), namespace="geneticas")),
+    ], "comunicacion"), namespace="comunicacion")),
     *rutas_proyecto,
 ]

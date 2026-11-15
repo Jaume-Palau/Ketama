@@ -6,9 +6,9 @@ La referencia de alcance es [ESPECIFICACION_PROYECTO.md](ESPECIFICACION_PROYECTO
 ## Estado actual
 
 Está creado el esqueleto y el modelo `Socio`, vinculado al usuario nativo de
-Django. `geneticas` y `comunicacion` aún no tienen funcionalidades.
+Django. `geneticas` incluye el catálogo privado; `comunicacion` aún no tiene pantallas.
 El espacio de socios incluye acceso, cambio de contraseña, cierre de sesión y
-una bienvenida provisional. El panel de gestión conserva su entrada `/admin/`.
+el catálogo como pantalla inicial. El panel de gestión conserva su entrada `/admin/`.
 La migración `0004_socio_estado` está preparada sin aplicar.
 
 ## Gestión de socios
@@ -209,8 +209,9 @@ También están disponibles las propiedades `puntuacion_media` y
 `numero_valoraciones`. Sin votos, la media y el número son 0. No se almacena
 la media en la tabla de genéticas.
 
-El Admin permite consultar las valoraciones en modo de solo lectura. No hay
-vistas, formularios públicos, endpoints, estrellas visuales ni rankings.
+El Admin permite consultar las valoraciones en modo de solo lectura. El catálogo
+muestra la media y el número de votos, pero aún no hay formulario de votación,
+endpoints para enviar votos ni rankings independientes.
 La migración `geneticas/0002_valoracion.py` está preparada sin aplicar y depende
 de `socios/0004_socio_estado.py`.
 
@@ -229,13 +230,63 @@ con `python manage.py migrate geneticas`; este comando también puede aplicar
 dependencias pendientes de `socios`, cuyo estado inicial es `caducado`.
 No se han ejecutado migraciones sobre PostgreSQL real durante esta implementación.
 
+## Catálogo privado
+
+`/catalogo/` muestra exclusivamente las genéticas activas de PostgreSQL, con
+una tarjeta por fila e imágenes 4:3. El diseño toma como referencia el archivo
+`design/referencias/Catálogo Ketama de Genéticas Cannabis.png`. No utiliza
+fotografías ni registros de ejemplo como datos del catálogo.
+
+Parámetros GET, combinables y conservados al cambiar los filtros:
+
+- `q`: búsqueda parcial por nombre, sin distinguir mayúsculas.
+- `clasificacion`: `sativa`, `indica` o `hibrida`; vacío muestra todas.
+- `orden`: `valoracion` (predeterminado), `precio_asc` o `precio_desc`.
+
+La media y el número de votos se anotan mediante `Avg` y `Count` en la misma
+consulta del listado. La media más alta va primero; en caso de empate se usa
+el número de votos y el nombre. Las genéticas sin votos se muestran al final.
+Los precios desconocidos van al final en ambos órdenes de precio.
+
+La interfaz distingue precio desconocido de precio 0 y respeta `unidad_precio`:
+`gramo` se muestra como €/g y `unidad` como €/ud. Sin votos aparece «Sin valoraciones»;
+sin imagen aparece un marcador, también si la URL externa falla. No se inventan
+precios, imágenes ni puntuaciones. No hay enlaces a detalle ni controles de voto.
+
+El CSS del catálogo se carga solo en esta pantalla. La autenticación conserva
+sus estilos existentes. La búsqueda y ordenación funcionan sin JavaScript,
+mediante los botones Buscar/Aplicar; el JavaScript solo gestiona imágenes fallidas.
+La barra inferior tiene Catálogo y las secciones Avisos/Perfil deshabilitadas
+como próximas, sin enlaces rotos. El encabezado mantiene un cierre de sesión POST.
+
+El acceso de socios activos y el cambio de contraseña completado llevan al
+catálogo; `/` también redirige allí después de pasar el control de acceso.
+Se mantienen el aviso de caducidad, la exigencia de contraseña personal y la
+separación del Admin. Ninguna visita al catálogo modifica genéticas ni votos.
+
+Para probarlo con la base local ya preparada y las dependencias existentes:
+
+```sh
+source .venv/bin/activate
+python manage.py check
+python manage.py runserver
+```
+
+Abrir `http://127.0.0.1:8000/acceso/` e iniciar sesión como socio habilitado,
+en estado activo y con el cambio de contraseña completado. El catálogo está
+en `http://127.0.0.1:8000/catalogo/`. Las pruebas se pueden ejecutar con
+`python manage.py test geneticas socios`; el runner usa una base separada y
+aplica migraciones en esa base de pruebas. No se ejecutan migraciones reales
+como parte de esta implementación del catálogo.
+
 ## Autenticación de socios
 
 - `/acceso/`: número de socio (`User.username`) y contraseña, mediante
   `AuthenticationForm` y `LoginView` de Django.
 - `/cambiar-password/`: contraseña actual y nueva contraseña confirmada,
   mediante `PasswordChangeForm` y `PasswordChangeView`.
-- `/`: bienvenida provisional, disponible para socios activos después del cambio obligatorio.
+- `/`: redirección al catálogo para socios activos después del cambio obligatorio.
+- `/catalogo/`: catálogo de genéticas activas.
 - `/cuota-caducada/`: aviso «Tu cuota de socio está caducada. Contacta con el club para renovarla».
 - `/salir/`: cierre de sesión mediante POST con token CSRF.
 
@@ -282,7 +333,7 @@ redirige al cambio y que se puede cerrar sesión sin completarlo.
 
 La prueba manual completa implica establecer voluntariamente una contraseña
 nueva desde el formulario; esta implementación no realiza ese cambio por sí sola.
-Para comprobar la bienvenida, el perfil de prueba debe estar en estado `activo`
+Para comprobar el catálogo, el perfil de prueba debe estar en estado `activo`
 (asignado manualmente en Admin). Si está caducado, debe aparecer únicamente el
 aviso de cuota y el cierre de sesión. Después, cerrar sesión y volver a entrar
 con la contraseña nueva. El Admin sigue en `http://127.0.0.1:8000/admin/`.

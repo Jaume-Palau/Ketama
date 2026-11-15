@@ -1,4 +1,7 @@
-"""Rutas de geneticas; pendientes de implementar."""
+"""Rutas privadas del catálogo."""
+from django.urls import path
+
+from . import views
 
 app_name = "geneticas"
-urlpatterns = []
+urlpatterns = [path("", views.catalogo, name="catalogo")]
