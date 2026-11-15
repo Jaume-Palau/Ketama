@@ -36,6 +36,14 @@ class Genetica(models.Model):
         null=True,
         validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
     )
+    cbd = models.DecimalField(
+        "CBD (%)",
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+    )
     tipo_cultivo = models.CharField(
         "tipo de cultivo", max_length=10, choices=TipoCultivo.choices
     )
@@ -58,6 +66,10 @@ class Genetica(models.Model):
             models.CheckConstraint(
                 condition=models.Q(thc__gte=0, thc__lte=100) | models.Q(thc__isnull=True),
                 name="genetica_thc_entre_0_y_100",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(cbd__gte=0, cbd__lte=100) | models.Q(cbd__isnull=True),
+                name="genetica_cbd_entre_0_y_100",
             ),
             models.CheckConstraint(
                 condition=models.Q(precio__gte=0) | models.Q(precio__isnull=True),

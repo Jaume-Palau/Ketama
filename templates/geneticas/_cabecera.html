@@ -1,0 +1,14 @@
+<header class="catalogo-cabecera">
+    <div class="catalogo-marca" aria-label="Ketama">
+        <svg aria-hidden="true"><use href="#ketama-hoja"/></svg>
+        <span>Ketama</span>
+    </div>
+    <div class="catalogo-cuenta">
+        <span class="catalogo-privado">Club privado</span>
+        <form method="post" action="{% url 'socios:logout' %}">
+            {% csrf_token %}
+            <button type="submit" aria-label="Cerrar sesión" title="Cerrar sesión"><svg aria-hidden="true"><use href="#ketama-salir"/></svg></button>
+        </form>
+    </div>
+    <svg class="catalogo-hoja-fondo" aria-hidden="true"><use href="#ketama-hoja"/></svg>
+</header>

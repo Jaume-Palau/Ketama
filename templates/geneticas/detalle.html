@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ genetica.nombre }} · Ketama{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/catalogo.css' %}">
+<link rel="stylesheet" href="{% static 'css/detalle.css' %}">
+<script src="{% static 'js/catalogo.js' %}" defer></script>
+{% endblock %}
+{% block body_class %}catalogo-page detalle-page{% endblock %}
+{% block main_class %}catalogo-main detalle-main{% endblock %}
+{% block before_main %}
+{% include "geneticas/_iconos.html" %}
+<a class="catalogo-saltar" href="#contenido">Saltar a la ficha</a>
+{% endblock %}
+{% block content %}
+{% include "geneticas/_cabecera.html" %}
+<a class="detalle-volver" href="{{ volver_catalogo }}"><svg aria-hidden="true"><use href="#ketama-volver"/></svg>Volver al catálogo</a>
+
+<article class="detalle-ficha" aria-labelledby="detalle-nombre">
+    <div class="genetica-foto detalle-foto"{% if not genetica.imagen %} role="img" aria-label="Imagen no disponible para {{ genetica.nombre }}"{% endif %}>
+        <div class="genetica-sin-imagen" aria-hidden="true">
+            <svg><use href="#ketama-hoja"/></svg><span>Imagen no disponible</span>
+        </div>
+        {% if genetica.imagen %}<img src="{{ genetica.imagen }}" alt="Fotografía de {{ genetica.nombre }}" width="960" height="540" decoding="async" fetchpriority="high" data-imagen-catalogo>{% endif %}
+    </div>
+    <div class="detalle-identidad">
+        <h1 id="detalle-nombre">{{ genetica.nombre }}</h1>
+        <span class="genetica-tipo tipo-{{ genetica.clasificacion }}"><svg aria-hidden="true"><use href="#ketama-hoja"/></svg>{{ genetica.get_clasificacion_display }}</span>
+    </div>
+    <dl class="detalle-datos">
+        <div class="detalle-dato detalle-dato-precio">
+            <dt><svg aria-hidden="true"><use href="#ketama-precio"/></svg><span class="catalogo-solo-lector">Precio</span></dt>
+            <dd{% if genetica.precio is None %} class="detalle-no-informado"{% endif %}>{% if genetica.precio is not None %}{{ genetica.precio|floatformat:"2" }} <span>€/{% if genetica.unidad_precio == 'gramo' %}g{% else %}ud.{% endif %}</span>{% else %}Precio no disponible{% endif %}</dd>
+        </div>
+        <div class="detalle-dato">
+            <dt><svg aria-hidden="true"><use href="#ketama-porcentaje"/></svg>THC</dt>
+            <dd{% if genetica.thc is None %} class="detalle-no-informado"{% endif %}>{% if genetica.thc is not None %}{{ genetica.thc|floatformat:"-2" }} <span>%</span>{% else %}No informado{% endif %}</dd>
+        </div>
+        <div class="detalle-dato">
+            <dt><svg aria-hidden="true"><use href="#ketama-porcentaje"/></svg>CBD</dt>
+            <dd{% if genetica.cbd is None %} class="detalle-no-informado"{% endif %}>{% if genetica.cbd is not None %}{{ genetica.cbd|floatformat:"-2" }} <span>%</span>{% else %}No informado{% endif %}</dd>
+        </div>
+    </dl>
+    <section class="detalle-descripcion" aria-labelledby="detalle-descripcion-titulo">
+        <h2 id="detalle-descripcion-titulo">Descripción</h2>
+        <p>{% if genetica.descripcion %}{{ genetica.descripcion|linebreaksbr }}{% else %}Descripción no disponible.{% endif %}</p>
+    </section>
+
+    <section class="detalle-valoraciones" aria-labelledby="detalle-valoraciones-titulo">
+        <div class="detalle-resumen">
+            <h2 id="detalle-valoraciones-titulo">Valoraciones</h2>
+            {% if genetica.votos_catalogo %}
+            <p class="detalle-media" aria-label="Valoración media {{ genetica.media_catalogo|floatformat:'1' }} de 5, {{ genetica.votos_catalogo }} voto{{ genetica.votos_catalogo|pluralize }}">
+                <span class="detalle-estrella" aria-hidden="true">★</span><strong>{{ genetica.media_catalogo|floatformat:"1" }}</strong>
+                <span>({{ genetica.votos_catalogo }} {% if genetica.votos_catalogo == 1 %}valoración{% else %}valoraciones{% endif %})</span>
+            </p>
+            {% else %}<p class="detalle-sin-votos">Sin valoraciones</p><p class="detalle-numero-votos">0 valoraciones</p>{% endif %}
+        </div>
+        <ol class="detalle-distribucion" aria-label="Distribución de las puntuaciones">
+            {% for fila in distribucion %}
+            <li aria-label="{{ fila.puntuacion }} estrella{{ fila.puntuacion|pluralize }}: {{ fila.votos }} voto{{ fila.votos|pluralize }}">
+                <span class="detalle-nivel" aria-hidden="true">{{ fila.puntuacion }} <span>★</span></span>
+                <span class="detalle-barra" aria-hidden="true"><span style="width: {{ fila.porcentaje }}%"></span></span>
+                <span class="detalle-conteo" aria-hidden="true">{{ fila.votos }}</span>
+            </li>
+            {% endfor %}
+        </ol>
+    </section>
+
+    <section class="detalle-mi-valoracion" aria-labelledby="detalle-mi-valoracion-titulo">
+        <div>
+            <h2 id="detalle-mi-valoracion-titulo">Tu valoración</h2>
+            {% if genetica.mi_puntuacion %}<p>Tu puntuación actual: {{ genetica.mi_puntuacion }} de 5.</p>{% else %}<p>Aún no has valorado esta genética.</p>{% endif %}
+        </div>
+        <div class="detalle-estrellas-lectura" aria-hidden="true">{% for estrella in estrellas %}<span{% if genetica.mi_puntuacion and estrella <= genetica.mi_puntuacion %} class="puntuada"{% endif %}>{% if genetica.mi_puntuacion and estrella <= genetica.mi_puntuacion %}★{% else %}☆{% endif %}</span>{% endfor %}</div>
+        <p class="detalle-votacion-pendiente">La votación y la edición estarán disponibles próximamente.</p>
+    </section>
+</article>
+{% endblock %}
+{% block after_main %}{% include "geneticas/_navegacion.html" %}{% endblock %}

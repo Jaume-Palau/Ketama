@@ -1,0 +1,5 @@
+<nav class="catalogo-navegacion" aria-label="Navegación principal">
+    <a href="{% if volver_catalogo %}{{ volver_catalogo }}{% else %}{% url 'geneticas:catalogo' %}{% endif %}" aria-current="{% if es_detalle %}location{% else %}page{% endif %}"><svg aria-hidden="true"><use href="#ketama-hoja"/></svg><span>Catálogo</span></a>
+    <span class="catalogo-nav-pendiente" aria-disabled="true"><svg aria-hidden="true"><use href="#ketama-avisos"/></svg><span>Avisos</span><small>Próximamente</small></span>
+    <span class="catalogo-nav-pendiente" aria-disabled="true"><svg aria-hidden="true"><use href="#ketama-perfil"/></svg><span>Perfil</span><small>Próximamente</small></span>
+</nav>

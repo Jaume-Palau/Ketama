@@ -60,6 +60,9 @@
 .catalogo-recuento { margin: .9rem .1rem .65rem; font-size: .75rem; color: #aaaeb0; }
 .catalogo-lista { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
 .genetica-tarjeta { overflow: hidden; border: 1px solid transparent; border-radius: 1.05rem; background: linear-gradient(130deg, #16191f, #101713) padding-box, linear-gradient(125deg, #a9ec4c, #697647 35%, #a85aca 72%, #a8de7d) border-box; box-shadow: 0 10px 30px #0007, 0 0 24px #9187c009; }
+.catalogo-page .genetica-enlace { display: block; color: inherit; text-decoration: none; }
+.catalogo-page .genetica-enlace:focus-visible { outline-offset: -4px; border-radius: 1rem; }
+.genetica-tarjeta:target { scroll-margin-top: 1rem; }
 .genetica-foto { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: radial-gradient(ellipse at 75% 15%, #70418144, transparent 65%), radial-gradient(ellipse at 20% 80%, #75a63835, transparent 70%), #121a15; }
 .genetica-foto::after { content: ""; pointer-events: none; position: absolute; inset: auto 0 0; height: 20%; background: linear-gradient(transparent, #11171b30); }
 .genetica-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }

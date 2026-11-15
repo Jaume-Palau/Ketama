@@ -61,6 +61,31 @@ class GeneticaTests(SimpleTestCase):
                 with self.subTest(clasificacion=clasificacion, tipo=tipo):
                     self.validar(self.genetica(clasificacion=clasificacion, tipo_cultivo=tipo))
 
+    def test_cbd_es_opcional_sin_asignar_un_valor_inventado(self):
+        genetica = self.genetica()
+        self.validar(genetica)
+        self.assertIsNone(genetica.cbd)
+        self.validar(self.genetica(cbd=None))
+
+    def test_cbd_admite_limites_y_decimales(self):
+        for cbd in (Decimal("0"), Decimal("100"), Decimal("0.25"), Decimal("12.50")):
+            with self.subTest(cbd=cbd):
+                genetica = self.genetica(cbd=cbd)
+                self.validar(genetica)
+                self.assertEqual(genetica.cbd, cbd)
+
+    def test_cbd_rechaza_fuera_de_rango_y_precision_excesiva(self):
+        for cbd in (Decimal("-0.01"), Decimal("100.01"), Decimal("0.255")):
+            with self.subTest(cbd=cbd):
+                with self.assertRaises(ValidationError) as error:
+                    self.validar(self.genetica(cbd=cbd))
+                self.assertIn("cbd", error.exception.message_dict)
+
+    def test_cbd_vacio_en_formulario_se_interpreta_como_desconocido(self):
+        campo = Genetica._meta.get_field("cbd").formfield()
+        self.assertIsNone(campo.clean(""))
+        self.assertEqual(campo.clean("0.25"), Decimal("0.25"))
+
     def test_selecciones_rechazan_valores_desconocidos_o_multiples(self):
         for campo, valor in (
             ("clasificacion", "otra"),

@@ -251,11 +251,12 @@ Los precios desconocidos van al final en ambos órdenes de precio.
 La interfaz distingue precio desconocido de precio 0 y respeta `unidad_precio`:
 `gramo` se muestra como €/g y `unidad` como €/ud. Sin votos aparece «Sin valoraciones»;
 sin imagen aparece un marcador, también si la URL externa falla. No se inventan
-precios, imágenes ni puntuaciones. No hay enlaces a detalle ni controles de voto.
+precios, imágenes ni puntuaciones. Cada tarjeta enlaza a su ficha completa.
 
-El CSS del catálogo se carga solo en esta pantalla. La autenticación conserva
+El CSS del catálogo se comparte con la ficha detallada. La autenticación conserva
 sus estilos existentes. La búsqueda y ordenación funcionan sin JavaScript,
-mediante los botones Buscar/Aplicar; el JavaScript solo gestiona imágenes fallidas.
+mediante los botones Buscar/Aplicar; el JavaScript gestiona imágenes fallidas y
+la restauración del desplazamiento al regresar de una ficha.
 La barra inferior tiene Catálogo y las secciones Avisos/Perfil deshabilitadas
 como próximas, sin enlaces rotos. El encabezado mantiene un cierre de sesión POST.
 
@@ -278,6 +279,54 @@ en `http://127.0.0.1:8000/catalogo/`. Las pruebas se pueden ejecutar con
 `python manage.py test geneticas socios`; el runner usa una base separada y
 aplica migraciones en esa base de pruebas. No se ejecutan migraciones reales
 como parte de esta implementación del catálogo.
+
+## Ficha detallada de genéticas
+
+`/catalogo/<id>/` muestra una única fotografía, nombre, clasificación, precio y
+unidad, THC, CBD, descripción y el resumen de valoraciones de una genética activa.
+La referencia visual es `design/referencias/Ficha Purple Punch en Ketama.png`.
+Se reutilizan cabecera, iconos, etiquetas de clasificación, marcador de imagen y
+barra inferior. Esta mantiene Catálogo, Avisos y Perfil; las dos últimas secciones
+siguen deshabilitadas. No se añaden Inicio, Carrito ni favoritos.
+
+La ficha obtiene en una sola consulta la media, el total de votos, el reparto
+de 5 a 1 estrellas y, si existe, la puntuación del socio autenticado. Todos son
+datos persistidos, sin números de ejemplo. La sección «Tu valoración» es solo
+de lectura e indica que votar/editar estará disponible después; no contiene
+formularios ni botones de votación. No se modifica ninguna valoración al abrirla.
+
+Precio, THC y CBD vacíos se muestran como no disponibles/informados, mientras que
+un 0 real se conserva. Una URL de imagen fallida muestra el mismo marcador que
+una imagen no informada. Las descripciones se escapan y conservan los saltos
+de línea, sin interpretar HTML almacenado.
+
+Los enlaces de las tarjetas llevan `q`, `clasificacion` y `orden`. «Volver al
+catálogo» y la barra inferior reconstruyen una URL interna con esos parámetros
+y el ancla de la tarjeta. No se aceptan URLs externas de retorno. El JavaScript
+guarda temporalmente URL y desplazamiento en `sessionStorage` de la pestaña,
+y los restaura una sola vez al volver por el enlace o por el botón del navegador.
+Si JavaScript o ese almacenamiento están deshabilitados, permanecen los filtros
+y el ancla a la tarjeta, aunque no se restaura la posición exacta en píxeles.
+
+El middleware sigue protegiendo el acceso directo: cuenta habilitada, estado
+activo y cambio obligatorio de contraseña completado. Las genéticas inactivas
+o inexistentes devuelven 404 al socio autorizado. La vista admite solo GET/HEAD
+y sus respuestas no se guardan en caché.
+
+Para probar la navegación, iniciar el servidor con la base local ya preparada,
+entrar como socio activo, buscar/filtrar/ordenar el catálogo, desplazarse y abrir
+una tarjeta. Comprobar la ficha y regresar con «Volver al catálogo» y con Atrás
+del navegador. No se aplican migraciones ni se modifican datos para esta pantalla.
+
+Pruebas de la nueva vista y regresiones del catálogo:
+
+```sh
+python manage.py test geneticas.tests.test_detalle geneticas.tests.test_catalogo
+```
+
+El runner usa su propia base PostgreSQL de pruebas y aplica allí las migraciones.
+No debe configurarse para apuntar a la base real. La restauración visual del
+desplazamiento se comprueba manualmente en el navegador.
 
 ## Autenticación de socios
 

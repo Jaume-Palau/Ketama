@@ -7,7 +7,7 @@ from .models import Genetica, Valoracion
 @admin.register(Genetica)
 class GeneticaAdmin(admin.ModelAdmin):
     list_display = (
-        "nombre", "clasificacion", "thc", "tipo_cultivo", "precio", "unidad_precio", "activo"
+        "nombre", "clasificacion", "thc", "cbd", "tipo_cultivo", "precio", "unidad_precio", "activo"
     )
     list_editable = ("activo",)
     list_filter = ("clasificacion", "tipo_cultivo", "activo")

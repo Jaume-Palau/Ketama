@@ -12,20 +12,7 @@
 <a class="catalogo-saltar" href="#contenido">Saltar al catálogo</a>
 {% endblock %}
 {% block content %}
-<header class="catalogo-cabecera">
-    <div class="catalogo-marca" aria-label="Ketama">
-        <svg aria-hidden="true"><use href="#ketama-hoja"/></svg>
-        <span>Ketama</span>
-    </div>
-    <div class="catalogo-cuenta">
-        <span class="catalogo-privado">Club privado</span>
-        <form method="post" action="{% url 'socios:logout' %}">
-            {% csrf_token %}
-            <button type="submit" aria-label="Cerrar sesión" title="Cerrar sesión"><svg aria-hidden="true"><use href="#ketama-salir"/></svg></button>
-        </form>
-    </div>
-    <svg class="catalogo-hoja-fondo" aria-hidden="true"><use href="#ketama-hoja"/></svg>
-</header>
+{% include "geneticas/_cabecera.html" %}
 <h1 class="catalogo-titulo">Catálogo</h1>
 
 <form class="catalogo-controles" method="get" action="{% url 'geneticas:catalogo' %}" role="search" aria-label="Buscar y ordenar genéticas">
@@ -55,11 +42,12 @@
     </div>
 </form>
 
-<section class="catalogo-resultados" aria-label="Genéticas disponibles">
+<section class="catalogo-resultados" aria-label="Genéticas disponibles" data-catalogo-lista data-catalogo-url="{{ catalogo_url }}">
     <p class="catalogo-recuento">{{ geneticas|length }} genética{{ geneticas|length|pluralize }}{% if busqueda or clasificacion %} encontrada{{ geneticas|length|pluralize }}{% else %} disponible{{ geneticas|length|pluralize }}{% endif %}</p>
     <div class="catalogo-lista">
     {% for genetica in geneticas %}
-        <article class="genetica-tarjeta" aria-labelledby="genetica-{{ genetica.pk }}">
+        <article id="tarjeta-{{ genetica.pk }}" class="genetica-tarjeta" aria-labelledby="genetica-{{ genetica.pk }}">
+            <a class="genetica-enlace" href="{% url 'geneticas:detalle' genetica.pk %}?{{ consulta_catalogo }}" aria-labelledby="genetica-{{ genetica.pk }}" data-ficha-genetica="tarjeta-{{ genetica.pk }}">
             <div class="genetica-foto"{% if not genetica.imagen %} role="img" aria-label="Imagen no disponible para {{ genetica.nombre }}"{% endif %}>
                 <div class="genetica-sin-imagen" aria-hidden="true">
                     <svg><use href="#ketama-hoja"/></svg>
@@ -89,6 +77,7 @@
                     </p>
                 </div>
             </div>
+            </a>
         </article>
     {% empty %}
         <div class="catalogo-vacio">
@@ -104,9 +93,5 @@
 </section>
 {% endblock %}
 {% block after_main %}
-<nav class="catalogo-navegacion" aria-label="Navegación principal">
-    <a href="{% url 'geneticas:catalogo' %}" aria-current="page"><svg aria-hidden="true"><use href="#ketama-hoja"/></svg><span>Catálogo</span></a>
-    <span class="catalogo-nav-pendiente" aria-disabled="true"><svg aria-hidden="true"><use href="#ketama-avisos"/></svg><span>Avisos</span><small>Próximamente</small></span>
-    <span class="catalogo-nav-pendiente" aria-disabled="true"><svg aria-hidden="true"><use href="#ketama-perfil"/></svg><span>Perfil</span><small>Próximamente</small></span>
-</nav>
+{% include "geneticas/_navegacion.html" %}
 {% endblock %}
