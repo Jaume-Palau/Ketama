@@ -94,16 +94,45 @@ class AutenticacionSociosTests(TestCase):
         })
         self.assertRedirects(response, reverse("socios:cambiar_password"))
 
-    def test_nuevo_css_no_se_carga_en_otras_pantallas(self):
+    def test_estilos_de_acceso_se_comparten_sin_afectar_al_catalogo(self):
         self.client.force_login(self.usuario)
         response = self.client.get(reverse("socios:cambiar_password"))
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "css/login.css")
+        self.assertContains(response, "css/login.css")
+        self.assertContains(response, "css/cambiar_password.css")
         Socio.objects.filter(pk=self.socio.pk).update(debe_cambiar_password=False)
         response = self.client.get(reverse("geneticas:catalogo"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "css/catalogo.css")
         self.assertNotContains(response, "css/login.css")
+        self.assertNotContains(response, "css/cambiar_password.css")
+
+    def test_cambio_password_conserva_campos_ayudas_y_csrf_en_nuevo_diseno(self):
+        self.client.force_login(self.usuario)
+        response = self.client.get(reverse("socios:cambiar_password"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "socios/cambiar_password.html")
+        self.assertContains(response, "Primer acceso")
+        self.assertContains(response, 'type="password"', count=3)
+        for campo in ("old_password", "new_password1", "new_password2"):
+            self.assertContains(response, f'name="{campo}"')
+            self.assertContains(response, f'for="id_{campo}"')
+        self.assertContains(response, 'autocomplete="current-password"')
+        self.assertContains(response, 'autocomplete="new-password"', count=2)
+        self.assertContains(response, 'id="id_new_password1_helptext"')
+        self.assertContains(response, 'name="csrfmiddlewaretoken"', count=2)
+        self.assertContains(response, 'action="' + reverse("socios:logout") + '"')
+        self.assertContains(response, "Guardar contraseña")
+        self.assertContains(response, "Cerrar sesión")
+        self.assertNotContains(response, self.password_inicial)
+
+    def test_cambio_password_muestra_errores_sin_exponer_contrasenas(self):
+        self.client.force_login(self.usuario)
+        response = self.cambiar(new_password1="123", new_password2="123")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["form"].errors)
+        self.assertContains(response, 'class="login-error-campo" role="alert"')
+        self.assertNotContains(response, self.password_inicial)
 
     def test_paginas_privadas_requieren_login(self):
         for nombre in ("inicio", "cambiar_password"):
