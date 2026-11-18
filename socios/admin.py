@@ -8,7 +8,7 @@ from .models import Socio
 
 class SocioInline(admin.StackedInline):
     model = Socio
-    fields = ("nombre_completo", "telefono", "estado", "debe_cambiar_password")
+    fields = ("nombre_completo", "estado", "debe_cambiar_password")
     extra = 1
     max_num = 1
     can_delete = False
@@ -22,7 +22,7 @@ admin.site.unregister(User)
 class UsuarioAdmin(UserAdmin):
     inlines = (SocioInline,)
     list_display = ("username", "nombre_socio", "estado_socio", "is_active", "is_staff")
-    search_fields = ("username", "socio__nombre_completo", "socio__telefono")
+    search_fields = ("username", "socio__nombre_completo")
     list_filter = ("socio__estado", "is_active", "is_staff")
     list_select_related = ("socio",)
     fieldsets = (

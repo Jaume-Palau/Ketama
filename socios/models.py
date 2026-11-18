@@ -15,7 +15,6 @@ class Socio(models.Model):
         verbose_name="usuario",
     )
     nombre_completo = models.CharField("nombre completo", max_length=200)
-    telefono = models.CharField("teléfono", max_length=30, blank=True)
     estado = models.CharField(
         "estado", max_length=8, choices=Estado.choices, default=Estado.CADUCADO
     )

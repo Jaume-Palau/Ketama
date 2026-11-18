@@ -16,7 +16,7 @@ La migración `0004_socio_estado` está preparada sin aplicar.
 Tras revisar y aplicar la migración en una fase autorizada, los socios se
 gestionarán desde **Autenticación y autorización → Usuarios** en Django Admin.
 Al crear un usuario, indicar su número de socio en el nombre de usuario y
-rellenar el perfil con nombre completo y, opcionalmente, teléfono. El número conserva ceros
+rellenar el perfil con nombre completo y estado. El número conserva ceros
 iniciales y su unicidad la garantiza el usuario nativo.
 
 La contraseña se gestiona con los formularios estándar y el hash de Django.
@@ -44,9 +44,34 @@ importación real durante su desarrollo.
 
 ## Importación inicial desde CSV
 
+### Retirada de teléfonos
+
+La migración pendiente `socios.0005_remove_socio_telefono` elimina únicamente
+la columna de teléfono; conserva socios, nombres, números, estados y contraseñas.
+No modifica las migraciones históricas ni el CSV original. Los teléfonos siguen
+en PostgreSQL hasta aplicarla; recrear la columna posteriormente no recuperaría
+su contenido. Aplicarla antes de crear socios con esta versión del código.
+
+Comando para una fase autorizada (no ejecutado durante este cambio):
+
+```sh
+python manage.py migrate socios 0005_remove_socio_telefono
+```
+
+Pruebas afectadas, en la base independiente creada por el runner:
+
+```sh
+python manage.py test socios
+```
+
+### Uso del importador
+
 El comando `importar_socios` lee directamente el archivo indicado, sin copiarlo.
-Requiere UTF-8 (admite BOM), separador `;` y exactamente las columnas `ESTADO`,
-`NºSocio`, `NOMBRE`, `APELLIDOS` y `TELEFONO` (pueden cambiar de orden).
+Requiere UTF-8 (admite BOM), separador `;` y las columnas `ESTADO`,
+`NºSocio`, `NOMBRE` y `APELLIDOS` (pueden cambiar de orden).
+También acepta la columna opcional `TELEFONO` del archivo original, pero ignora
+su contenido: no lo valida, almacena ni utiliza para generar contraseñas.
+No se admiten otras columnas ni cabeceras duplicadas.
 El CSV real debe permanecer fuera de Git; las reglas existentes de `.gitignore`
 excluyen los archivos CSV. El comando no cambia esas reglas ni añade archivos a Git.
 
@@ -70,10 +95,7 @@ Reglas aplicadas:
 - `inactivo` y `expulsado` se omiten y suman al contador de descartados por
   inactividad, sin considerarse errores ni crear cuentas.
 - Se unen nombre y apellidos, normalizando los espacios del nombre completo.
-  El teléfono se conserva como texto, incluidos ceros iniciales, signos y
-  espacios internos. El teléfono es opcional: una celda vacía o con espacios
-  se guarda como `""`, nunca como `NULL`. Las cinco columnas siguen siendo
-  obligatorias; número de socio, nombre y apellidos deben estar cumplimentados.
+  Número de socio, nombre y apellidos deben estar cumplimentados.
 - El número de socio debe contener dígitos ASCII y se conserva como texto,
   incluidos ceros iniciales. `00125` y `125` son identificadores distintos.
 - Se descarta el número `0` siempre. No se actualizan cuentas existentes,
@@ -117,7 +139,7 @@ Estas pruebas no utilizan el archivo de socios real.
 
 El comando independiente `asignar_estados_socios` consulta el CSV original y
 localiza cuentas existentes por número de socio. No crea usuarios ni perfiles;
-solo actualiza `Socio.estado`. Conserva nombres, teléfonos, contraseñas, permisos,
+solo actualiza `Socio.estado`. Conserva nombres, contraseñas, permisos,
 habilitación de la cuenta e indicador de cambio de contraseña.
 Excluye administradores, personal y el número `0`, y descarta filas inactivas o
 expulsadas. Los recuentos no están fijados en 409: dependen de las cuentas reales.
@@ -166,7 +188,7 @@ que sigan siendo elegibles cuando se ejecute.
 
 La simulación solo consulta y muestra recuentos. Si una cuenta ya tiene la
 contraseña del nuevo formato, se omite sin reescribir su hash. No se muestran
-nombres, teléfonos, contraseñas ni hashes.
+nombres, datos del CSV, contraseñas ni hashes.
 
 Solo después de revisar la simulación, se puede autorizar la operación con:
 
@@ -411,7 +433,7 @@ de pruebas e iniciar sesión como socio activo para abrir Avisos desde la barra.
 `/perfil/` muestra únicamente nombre completo y número del socio autenticado,
 incluidos los ceros iniciales del número. No admite identificadores de otros
 socios en la ruta ni toma esos datos de parámetros GET/POST. Es una pantalla
-de consulta; no permite editar nombre, teléfono ni otros datos.
+de consulta; no permite editar nombre ni otros datos.
 
 Reutiliza cabecera, iconos, estilos dark/neón y navegación del catálogo, con un
 CSS específico para la tarjeta de datos y acciones. La navegación resalta Perfil

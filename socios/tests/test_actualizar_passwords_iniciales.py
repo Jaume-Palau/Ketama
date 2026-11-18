@@ -12,7 +12,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
 
-from socios.management.commands.importar_socios import COLUMNAS
+from socios.management.commands.importar_socios import COLUMNAS, COLUMNAS_OBLIGATORIAS
 from socios.models import Socio
 
 
@@ -46,15 +46,15 @@ class ActualizarPasswordsInicialesTests(TestCase):
         usuario = User.objects.create_user(username=numero, password=password, **permisos)
         # Nombre deliberadamente distinto: el comando debe consultar el CSV.
         Socio.objects.create(
-            usuario=usuario, nombre_completo="Ficha ficticia", telefono="",
+            usuario=usuario, nombre_completo="Ficha ficticia",
             debe_cambiar_password=pendiente,
         )
         return usuario
 
-    def escribir(self, filas):
+    def escribir(self, filas, columnas=COLUMNAS):
         with self.ruta.open("w", encoding="utf-8-sig", newline="") as archivo:
             writer = csv.writer(archivo, delimiter=";")
-            writer.writerow(COLUMNAS)
+            writer.writerow(columnas)
             writer.writerows(filas)
 
     def ejecutar(self, modo="--dry-run"):
@@ -64,6 +64,21 @@ class ActualizarPasswordsInicialesTests(TestCase):
 
     def snapshot(self):
         return list(User.objects.order_by("pk").values()), list(Socio.objects.order_by("pk").values())
+
+    def test_compatibilidad_csv_con_telefono_ignorado_y_sin_columna(self):
+        antes = self.snapshot()
+        for columnas, fila in (
+            (COLUMNAS, ["activo", "125", "María José", "García López", "x" * 100 + "\x00"]),
+            (COLUMNAS_OBLIGATORIAS, ["activo", "125", "María José", "García López"]),
+        ):
+            with self.subTest(columnas=columnas):
+                self.escribir([fila], columnas)
+                self.assertIn("Se actualizarían: 1", self.ejecutar())
+                self.assertEqual(self.snapshot(), antes)
+        self.assertIn("Actualizadas: 1", self.ejecutar("--apply"))
+        self.assertEqual(self.snapshot()[1], antes[1])
+        self.usuario.refresh_from_db()
+        self.assertTrue(self.usuario.check_password("mariajosegarcia125"))
 
     def test_dry_run_no_escribe_y_solo_cuenta_elegibles(self):
         antes = self.snapshot()

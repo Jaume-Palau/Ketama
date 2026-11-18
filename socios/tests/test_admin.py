@@ -1,17 +1,19 @@
 """Validación del perfil en altas del Admin, sin base de datos."""
+from django.contrib import admin
 from django.contrib.auth.models import User
 from django.forms import inlineformset_factory
 from django.test import SimpleTestCase
 
+from socios.admin import SocioInline
 from socios.models import Socio
 
 
 class PerfilSocioAdminTests(SimpleTestCase):
-    def formset(self, nombre_completo="", telefono=""):
+    def formset(self, nombre_completo="", estado=Socio.Estado.CADUCADO):
         perfil_formset = inlineformset_factory(
             User,
             Socio,
-            fields=("nombre_completo", "telefono"),
+            fields=("nombre_completo", "estado"),
             extra=1,
             max_num=1,
             can_delete=False,
@@ -25,23 +27,23 @@ class PerfilSocioAdminTests(SimpleTestCase):
                 "perfil-MIN_NUM_FORMS": "0",
                 "perfil-MAX_NUM_FORMS": "1",
                 "perfil-0-nombre_completo": nombre_completo,
-                "perfil-0-telefono": telefono,
+                "perfil-0-estado": estado,
             },
         )
 
     def test_perfil_completo_valido(self):
-        perfil = self.formset("Socio de prueba", "+34 600 000 000")
+        perfil = self.formset("Socio de prueba")
         self.assertTrue(perfil.is_valid(), perfil.errors)
         socio = perfil.save(commit=False)[0]
         self.assertEqual(socio.numero_socio, "00042")
 
-    def test_perfil_sin_telefono_valido(self):
-        perfil = self.formset("Socio de prueba", "")
-        self.assertTrue(perfil.is_valid(), perfil.errors)
-        self.assertEqual(perfil.save(commit=False)[0].telefono, "")
+    def test_admin_sin_campos_ni_busqueda_por_telefono(self):
+        self.assertNotIn("telefono", SocioInline.fields)
+        self.assertNotIn("socio__telefono", admin.site._registry[User].search_fields)
+        self.assertNotIn("telefono", self.formset().forms[0].fields)
 
     def test_perfil_requiere_nombre(self):
-        perfil = self.formset("", "+34 600 000 000")
+        perfil = self.formset("", Socio.Estado.ACTIVO)
         self.assertFalse(perfil.is_valid())
         self.assertIn("nombre_completo", perfil.forms[0].errors)
 

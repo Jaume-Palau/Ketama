@@ -12,7 +12,7 @@ from django.core.management.base import CommandError
 from django.test import TestCase
 
 from socios.management.commands.importar_socios import (
-    COLUMNAS, generar_password_inicial, normalizar_nombre,
+    COLUMNAS, COLUMNAS_OBLIGATORIAS, generar_password_inicial, normalizar_nombre,
 )
 from socios.models import Socio
 
@@ -30,7 +30,6 @@ class ImportarSociosTests(TestCase):
         self.perfil_cero = Socio.objects.create(
             usuario=self.usuario_cero,
             nombre_completo="Cuenta de prueba",
-            telefono="000000000",
             debe_cambiar_password=False,
         )
 
@@ -53,7 +52,6 @@ class ImportarSociosTests(TestCase):
         self.assertTrue(self.usuario_cero.is_active)
         self.assertFalse(self.perfil_cero.debe_cambiar_password)
         self.assertEqual(self.perfil_cero.nombre_completo, "Cuenta de prueba")
-        self.assertEqual(self.perfil_cero.telefono, "000000000")
 
     def test_simulacion_cuenta_sin_modificar_la_base(self):
         self.escribir([
@@ -95,7 +93,6 @@ class ImportarSociosTests(TestCase):
         self.assertFalse(usuario.is_staff)
         self.assertFalse(usuario.is_superuser)
         self.assertEqual(usuario.socio.nombre_completo, "María García López")
-        self.assertEqual(usuario.socio.telefono, "001234567")
         self.assertTrue(usuario.socio.debe_cambiar_password)
         self.assertEqual(usuario.socio.estado, Socio.Estado.ACTIVO)
         self.assertEqual(
@@ -107,7 +104,7 @@ class ImportarSociosTests(TestCase):
         self.assertFalse(User.objects.filter(username="127").exists())
         self.comprobar_cero_intacto()
 
-    def test_telefonos_vacios_se_simulan_y_guardan_como_cadena_vacia(self):
+    def test_columna_telefono_vacia_se_ignora(self):
         self.escribir([
             ["activo", "125", "Ana", "De Prueba", ""],
             ["caducado", "126", "Eva", "De Prueba", "   "],
@@ -125,13 +122,33 @@ class ImportarSociosTests(TestCase):
         self.assertIn("Importados: 2", self.ejecutar("--apply"))
         for numero in ("125", "126"):
             usuario = User.objects.get(username=numero)
-            self.assertEqual(usuario.socio.telefono, "")
             self.assertTrue(usuario.socio.debe_cambiar_password)
             self.assertTrue(usuario.is_active)
             self.assertFalse(usuario.is_staff)
             self.assertFalse(usuario.is_superuser)
         self.assertFalse(User.objects.filter(username="127").exists())
         self.comprobar_cero_intacto()
+
+    def test_telefono_se_ignora_incluso_con_longitud_o_caracteres_invalidos(self):
+        self.escribir([
+            ["activo", "125", "Ana", "Prueba", "6" * 100],
+            ["caducado", "126", "Eva", "Prueba", "ignorado\x00\n"],
+        ])
+        self.assertIn("Se importarían: 2", self.ejecutar())
+        self.assertEqual(User.objects.count(), 1)
+        self.assertIn("Importados: 2", self.ejecutar("--apply"))
+        self.assertNotIn("telefono", {campo.name for campo in Socio._meta.fields})
+        for numero, password in (("125", "anaprueba125"), ("126", "evaprueba126")):
+            self.assertTrue(User.objects.get(username=numero).check_password(password))
+        self.comprobar_cero_intacto()
+
+    def test_csv_sin_columna_telefono(self):
+        self.escribir([
+            ["activo", "125", "Ana", "Prueba"],
+        ], columnas=COLUMNAS_OBLIGATORIAS)
+        self.assertIn("Se importarían: 1", self.ejecutar())
+        self.assertIn("Importados: 1", self.ejecutar("--apply"))
+        self.assertEqual(User.objects.get(username="125").socio.nombre_completo, "Ana Prueba")
 
     def test_expulsados_se_descartan_sin_errores_ni_cuentas(self):
         self.escribir([
@@ -194,11 +211,10 @@ class ImportarSociosTests(TestCase):
             ["activo", "126", "", "Prueba", "600000000"],
             ["activo", "126", "Ana", "", "600000000"],
             ["otro", "126", "Ana", "Prueba", "600000000"],
-            ["activo", "126", "Ana", "Prueba", "6" * 31],
             ["activo", "1" * 151, "Ana", "Prueba", "600000000"],
             ["activo", "126", "A" * 201, "Prueba", "600000000"],
             ["activo", "126", "---", "!!!", "600000000"],
-            ["activo", "126", "Ana", "Prueba"],
+            ["activo", "126", "Ana"],
             ["activo", "126", "Ana", "Prueba", "600000000", "extra"],
             ["activo", "126", "Ana\x00", "Prueba", "600000000"],
         ]
@@ -237,7 +253,7 @@ class ImportarSociosTests(TestCase):
         self.comprobar_cero_intacto()
 
     def test_cabeceras_invalidas_rechazadas(self):
-        for cabecera in (COLUMNAS[:-1], (*COLUMNAS, "OTRA"), ("ESTADO",) * 5):
+        for cabecera in (COLUMNAS_OBLIGATORIAS[:-1], (*COLUMNAS, "OTRA"), ("ESTADO",) * 5):
             self.escribir([], cabecera)
             with self.assertRaises(CommandError):
                 self.ejecutar()

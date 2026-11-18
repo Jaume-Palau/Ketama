@@ -9,7 +9,7 @@ from socios.models import Socio
 
 class EstadoSocioModeloTests(SimpleTestCase):
     def test_estado_inicial_restringido_y_validacion(self):
-        socio = Socio(nombre_completo="Socio ficticio", telefono="")
+        socio = Socio(nombre_completo="Socio ficticio")
         self.assertEqual(socio.estado, Socio.Estado.CADUCADO)
         socio.estado = "desconocido"
         with self.assertRaises(ValidationError) as error:
@@ -134,7 +134,6 @@ class AccesoPorEstadoTests(TestCase):
                 "socio-0-id": str(self.socio.pk),
                 "socio-0-usuario": str(self.usuario.pk),
                 "socio-0-nombre_completo": self.socio.nombre_completo,
-                "socio-0-telefono": "",
                 "socio-0-estado": Socio.Estado.ACTIVO,
                 "_save": "Guardar",
             },

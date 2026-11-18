@@ -11,7 +11,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
 
-from socios.management.commands.importar_socios import COLUMNAS
+from socios.management.commands.importar_socios import COLUMNAS, COLUMNAS_OBLIGATORIAS
 from socios.models import Socio
 
 
@@ -46,15 +46,15 @@ class AsignarEstadosSociosTests(TestCase):
             username=numero, password="Solo-Pruebas-8!", **permisos
         )
         Socio.objects.create(
-            usuario=usuario, nombre_completo="Nombre conservado", telefono="600000000",
+            usuario=usuario, nombre_completo="Nombre conservado",
             estado=estado, debe_cambiar_password=False,
         )
         return usuario
 
-    def escribir(self, filas):
+    def escribir(self, filas, columnas=COLUMNAS):
         with self.ruta.open("w", encoding="utf-8-sig", newline="") as archivo:
             writer = csv.writer(archivo, delimiter=";")
-            writer.writerow(COLUMNAS)
+            writer.writerow(columnas)
             writer.writerows(filas)
 
     def ejecutar(self, modo="--dry-run"):
@@ -64,6 +64,25 @@ class AsignarEstadosSociosTests(TestCase):
 
     def snapshot(self):
         return list(User.objects.order_by("pk").values()), list(Socio.objects.order_by("pk").values())
+
+    def test_compatibilidad_csv_con_telefono_ignorado_y_sin_columna(self):
+        antes = self.snapshot()
+        for columnas, fila in (
+            (COLUMNAS, ["activo", "125", "Nombre CSV", "Apellidos CSV", "x" * 100 + "\x00"]),
+            (COLUMNAS_OBLIGATORIAS, ["activo", "125", "Nombre CSV", "Apellidos CSV"]),
+        ):
+            with self.subTest(columnas=columnas):
+                self.escribir([fila], columnas)
+                self.assertIn("Se actualizarían a activo: 1", self.ejecutar())
+                self.assertEqual(self.snapshot(), antes)
+        self.assertIn("Actualizadas a activo: 1", self.ejecutar("--apply"))
+        usuarios, socios = self.snapshot()
+        self.assertEqual(usuarios, antes[0])
+        for anterior, posterior in zip(antes[1], socios):
+            esperado = dict(anterior)
+            if esperado["usuario_id"] == self.activo.pk:
+                esperado["estado"] = Socio.Estado.ACTIVO
+            self.assertEqual(posterior, esperado)
 
     def test_simulacion_sin_escrituras_con_recuentos_y_sin_datos_personales(self):
         antes = self.snapshot()
@@ -76,7 +95,7 @@ class AsignarEstadosSociosTests(TestCase):
         self.assertIn("inactividad o expulsión: 2", salida)
         self.assertIn("cuenta inexistente: 1", salida)
         self.assertIn("perfil inexistente: 1", salida)
-        for dato in ("Nombre CSV", "Apellidos CSV", "Nombre conservado", "600000000", self.activo.password):
+        for dato in ("Nombre CSV", "Apellidos CSV", "Nombre conservado", self.activo.password):
             self.assertNotIn(dato, salida)
 
     def test_aplicacion_modifica_solo_estados_elegibles(self):

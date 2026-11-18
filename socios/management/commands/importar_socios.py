@@ -13,12 +13,12 @@ from socios.models import Socio
 
 
 COLUMNAS = ("ESTADO", "NºSocio", "NOMBRE", "APELLIDOS", "TELEFONO")
+COLUMNAS_OBLIGATORIAS = COLUMNAS[:-1]
 
 
 class FilaSocio(NamedTuple):
     numero: str
     nombre_completo: str
-    telefono: str
     nombre: str
     apellidos: str
     estado: str
@@ -42,19 +42,25 @@ def leer_csv(ruta, *, rechazar_estados_contradictorios=False):
     vistos = {}
     max_usuario = User._meta.get_field("username").max_length
     max_nombre = Socio._meta.get_field("nombre_completo").max_length
-    max_telefono = Socio._meta.get_field("telefono").max_length
     try:
         with open(ruta, encoding="utf-8-sig", newline="") as archivo:
             lector = csv.DictReader(archivo, delimiter=";", strict=True)
             if (
                 lector.fieldnames is None
-                or len(lector.fieldnames) != len(COLUMNAS)
-                or set(lector.fieldnames) != set(COLUMNAS)
+                or len(lector.fieldnames) != len(set(lector.fieldnames))
+                or set(lector.fieldnames) not in (
+                    set(COLUMNAS_OBLIGATORIAS), set(COLUMNAS)
+                )
             ):
-                raise CommandError("Cabecera incorrecta: se requieren las cinco columnas acordadas.")
+                raise CommandError(
+                    "Cabecera incorrecta: se requieren ESTADO, NºSocio, NOMBRE y "
+                    "APELLIDOS; TELEFONO es opcional y se ignora."
+                )
             for fila in lector:
                 resumen["total"] += 1
-                if None in fila or any(valor is None for valor in fila.values()):
+                if None in fila or any(
+                    fila[columna] is None for columna in COLUMNAS_OBLIGATORIAS
+                ):
                     resumen["errores"] += 1
                     continue
                 estado = fila["ESTADO"].strip().lower()
@@ -71,7 +77,6 @@ def leer_csv(ruta, *, rechazar_estados_contradictorios=False):
                 nombre = " ".join(
                     f"{fila['NOMBRE'].strip()} {fila['APELLIDOS'].strip()}".split()
                 )
-                telefono = fila["TELEFONO"].strip()
                 if (
                     not all(
                         fila[columna].strip()
@@ -80,14 +85,13 @@ def leer_csv(ruta, *, rechazar_estados_contradictorios=False):
                     or not re.fullmatch(r"[0-9]+", numero)
                     or len(numero) > max_usuario
                     or len(nombre) > max_nombre
-                    or len(telefono) > max_telefono
                     or not normalizar_nombre(
                         fila["NOMBRE"] + fila["APELLIDOS"].split()[0]
                     )
                     or any(
                         unicodedata.category(caracter) == "Cc"
-                        for valor in fila.values()
-                        for caracter in valor
+                        for columna in COLUMNAS_OBLIGATORIAS
+                        for caracter in fila[columna]
                     )
                 ):
                     resumen["errores"] += 1
@@ -99,7 +103,7 @@ def leer_csv(ruta, *, rechazar_estados_contradictorios=False):
                     continue
                 vistos[numero] = estado
                 filas.append(FilaSocio(
-                    numero, nombre, telefono,
+                    numero, nombre,
                     fila["NOMBRE"].strip(), fila["APELLIDOS"].strip(), estado,
                 ))
     except (OSError, UnicodeError, csv.Error):
@@ -169,7 +173,6 @@ class Command(BaseCommand):
                     Socio.objects.create(
                         usuario=usuario,
                         nombre_completo=fila.nombre_completo,
-                        telefono=fila.telefono,
                         debe_cambiar_password=True,
                         estado=fila.estado,
                     )

@@ -19,7 +19,6 @@ class AutenticacionSociosTests(TestCase):
         cls.socio = Socio.objects.create(
             usuario=cls.usuario,
             nombre_completo="Socio de prueba",
-            telefono="600000000",
             estado=Socio.Estado.ACTIVO,
         )
         cls.sin_perfil = User.objects.create_user(
@@ -29,7 +28,7 @@ class AutenticacionSociosTests(TestCase):
             username="personal", password=cls.password_inicial, is_staff=True
         )
         Socio.objects.create(
-            usuario=cls.personal, nombre_completo="Personal de prueba", telefono="600000001"
+            usuario=cls.personal, nombre_completo="Personal de prueba"
         )
         cls.administrador = User.objects.create_superuser(
             username="administrador", password=cls.password_inicial

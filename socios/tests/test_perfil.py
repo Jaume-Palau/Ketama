@@ -16,11 +16,11 @@ class PerfilTests(TestCase):
         cls.usuario = User.objects.create_user(username="00125", password=cls.password)
         cls.socio = Socio.objects.create(
             usuario=cls.usuario, nombre_completo="Nombre del socio autenticado",
-            telefono="600000001", estado=Socio.Estado.ACTIVO, debe_cambiar_password=False,
+            estado=Socio.Estado.ACTIVO, debe_cambiar_password=False,
         )
         cls.otro = Socio.objects.create(
             usuario=User.objects.create_user(username="00126"),
-            nombre_completo="Nombre privado de otro socio", telefono="600000002",
+            nombre_completo="Nombre privado de otro socio",
             estado=Socio.Estado.ACTIVO, debe_cambiar_password=False,
         )
         cls.genetica = Genetica.objects.create(
@@ -43,8 +43,6 @@ class PerfilTests(TestCase):
         self.assertContains(response, self.socio.nombre_completo)
         self.assertContains(response, "00125")
         self.assertNotContains(response, self.otro.nombre_completo)
-        self.assertNotContains(response, self.otro.telefono)
-        self.assertNotContains(response, self.socio.telefono)
         self.assertNotContains(response, self.usuario.password)
         self.assertIn("no-store", response.headers["Cache-Control"])
         self.assertEqual(self.client.get(self.url + str(self.otro.pk) + "/").status_code, 404)

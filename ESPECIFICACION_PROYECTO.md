@@ -53,10 +53,13 @@ No usar el número de socio como contraseña ni una contraseña temporal compart
 Almacenar **solo**:
 - Número de socio (identificador único y nombre de usuario).
 - Nombre completo.
-- Teléfono.
 - Credenciales y datos técnicos mínimos imprescindibles para autenticación/permisos.
 
 **No almacenar** DNI, dirección, fecha de nacimiento ni datos adicionales del sistema de trabajo.
+
+No almacenar teléfonos de socios. La columna `TELEFONO` del CSV original es
+opcional y se ignora por completo al importar y al ejecutar los comandos de
+contraseñas y estados; no se modifica el archivo original.
 
 **Importación inicial desde CSV:** el archivo ya existe, pero se incorporará en una fase posterior. Contiene los campos anteriores y un `estado` de origen:
 
@@ -147,11 +150,11 @@ La estructura es una **base recomendada**, no una obligación de crear carpetas 
 
 ### Datos y autenticación — recomendación de implementación
 
-Para mantener la complejidad baja, se puede usar el sistema de usuarios de Django, con `username = numero_socio`, permisos nativos (`is_staff`, `is_superuser`, `is_active`) y un perfil `Socio` vinculado donde guardar `nombre_completo`, `telefono` y, si es necesario, un indicador de cambio obligatorio de contraseña. Considerar el modelo de usuario personalizado **antes de la primera migración** solo si aporta una ventaja clara; no complicar por anticipado.
+Para mantener la complejidad baja, se puede usar el sistema de usuarios de Django, con `username = numero_socio`, permisos nativos (`is_staff`, `is_superuser`, `is_active`) y un perfil `Socio` vinculado donde guardar `nombre_completo`, `estado` y un indicador de cambio obligatorio de contraseña. Considerar el modelo de usuario personalizado **antes de la primera migración** solo si aporta una ventaja clara; no complicar por anticipado.
 
 Modelos conceptuales:
 
-- `Socio` / cuenta: número de socio, nombre, teléfono, habilitado y credenciales.
+- `Socio` / cuenta: número de socio, nombre, estado, habilitado y credenciales.
 - `Genetica`: nombre, tipo, porcentajes, textos, imagen y visibilidad (si se implementa).
 - `Valoracion`: socio, genética, puntuación; restricción única socio–genética.
 - `Noticia`: título, contenido, imagen opcional, fecha.
