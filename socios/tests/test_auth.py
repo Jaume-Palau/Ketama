@@ -52,6 +52,59 @@ class AutenticacionSociosTests(TestCase):
             },
         )
 
+    def test_login_mantiene_campos_nativos_csrf_y_estilos_exclusivos(self):
+        response = self.client.get(reverse("socios:login"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "socios/login.html")
+        for contenido in (
+            'class="login-page"', 'css/login.css', 'name="csrfmiddlewaretoken"',
+            'for="id_username"', 'for="id_password"', 'name="username"',
+            'type="password"', 'autocomplete="username"',
+            'autocomplete="current-password"', "Número de socio", "Entrar a Ketama",
+        ):
+            self.assertContains(response, contenido)
+        self.assertNotContains(response, "css/catalogo.css")
+        self.assertNotContains(response, "css/detalle.css")
+
+    def test_login_muestra_error_y_conserva_numero_sin_exponer_password(self):
+        password_incorrecta = "No-Debe-Mostrarse-83!"
+        response = self.acceder(password=password_incorrecta)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["form"].non_field_errors())
+        self.assertContains(response, 'class="login-alerta" role="alert"')
+        self.assertContains(response, 'value="0"')
+        self.assertNotContains(response, password_incorrecta)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_login_muestra_errores_de_campos_obligatorios(self):
+        response = self.client.post(reverse("socios:login"), {})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("username", response.context["form"].errors)
+        self.assertIn("password", response.context["form"].errors)
+        self.assertContains(response, 'class="login-error-campo" role="alert"')
+        self.assertContains(response, 'aria-invalid="true"')
+
+    def test_login_con_csrf_valido_conserva_cambio_obligatorio(self):
+        client = Client(enforce_csrf_checks=True)
+        client.get(reverse("socios:login"))
+        token = client.cookies["csrftoken"].value
+        response = client.post(reverse("socios:login"), {
+            "username": "0", "password": self.password_inicial,
+            "csrfmiddlewaretoken": token,
+        })
+        self.assertRedirects(response, reverse("socios:cambiar_password"))
+
+    def test_nuevo_css_no_se_carga_en_otras_pantallas(self):
+        self.client.force_login(self.usuario)
+        response = self.client.get(reverse("socios:cambiar_password"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "css/login.css")
+        Socio.objects.filter(pk=self.socio.pk).update(debe_cambiar_password=False)
+        response = self.client.get(reverse("geneticas:catalogo"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "css/catalogo.css")
+        self.assertNotContains(response, "css/login.css")
+
     def test_paginas_privadas_requieren_login(self):
         for nombre in ("inicio", "cambiar_password"):
             with self.subTest(nombre=nombre):

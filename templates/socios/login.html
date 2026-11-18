@@ -1,11 +1,51 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Acceso de socios · Ketama{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'css/login.css' %}">{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block main_class %}login-main{% endblock %}
+{% block before_main %}
+{% include "geneticas/_iconos.html" %}
+<a class="login-saltar" href="#contenido">Saltar al formulario</a>
+<div class="login-ambiente" aria-hidden="true">
+    <svg class="login-hoja login-hoja-verde" focusable="false"><use href="#ketama-hoja"/></svg>
+    <svg class="login-hoja login-hoja-lila" focusable="false"><use href="#ketama-hoja"/></svg>
+</div>
+{% endblock %}
 {% block content %}
-<h1>Ketama</h1>
-<h2>Acceso de socios</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Entrar</button>
-</form>
+<header class="login-identidad">
+    <div class="login-marca" aria-label="Ketama">
+        <svg aria-hidden="true" focusable="false"><use href="#ketama-hoja"/></svg>
+        <span>Ketama</span>
+    </div>
+    <p class="login-privado"><span aria-hidden="true"></span>Tu club. Tu espacio.</p>
+</header>
+
+<section class="login-panel" aria-labelledby="login-titulo">
+    <div class="login-panel-cabecera">
+        <p class="login-etiqueta">Bienvenido a Ketama</p>
+        <h1 id="login-titulo">Acceso de socios</h1>
+        <p>Introduce tu número de socio y contraseña.</p>
+    </div>
+    <form class="login-formulario" method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="login-alerta" role="alert">
+            <p>No hemos podido iniciar sesión</p>
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+        {% for campo in form %}
+        <div class="login-campo">
+            <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+            {{ campo }}
+            {% if campo.help_text %}<p class="login-ayuda-campo" id="{{ campo.auto_id }}_helptext">{{ campo.help_text }}</p>{% endif %}
+            {% if campo.errors %}<div class="login-error-campo" role="alert">{{ campo.errors }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        <button class="login-entrar" type="submit">Entrar a Ketama<span aria-hidden="true">→</span></button>
+    </form>
+    <p class="login-ayuda">¿Necesitas ayuda para acceder?<br><span>Contacta con el club.</span></p>
+</section>
+<p class="login-pie">Un espacio privado, solo para socios.</p>
 {% endblock %}
