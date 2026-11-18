@@ -272,8 +272,8 @@ El CSS del catálogo se comparte con la ficha detallada. La autenticación conse
 sus estilos existentes. La búsqueda y ordenación funcionan sin JavaScript,
 mediante los botones Buscar/Aplicar; el JavaScript gestiona imágenes fallidas y
 la restauración del desplazamiento al regresar de una ficha.
-La barra inferior tiene Catálogo y las secciones Avisos/Perfil deshabilitadas
-como próximas, sin enlaces rotos. El encabezado mantiene un cierre de sesión POST.
+La barra inferior permite navegar entre Catálogo y Perfil. Avisos permanece
+deshabilitado, sin enlaces rotos. El encabezado mantiene un cierre de sesión POST.
 
 El acceso de socios activos y el cambio de contraseña completado llevan al
 catálogo; `/` también redirige allí después de pasar el control de acceso.
@@ -311,8 +311,8 @@ dimensiones, relleno por nivel, límites y ausencia de importes públicos.
 precio, THC, CBD, descripción y el resumen de valoraciones de una genética activa.
 La referencia visual es `design/referencias/Ficha Purple Punch en Ketama.png`.
 Se reutilizan cabecera, iconos, etiquetas de clasificación, marcador de imagen y
-barra inferior. Esta mantiene Catálogo, Avisos y Perfil; las dos últimas secciones
-siguen deshabilitadas. No se añaden Inicio, Carrito ni favoritos.
+barra inferior. Esta mantiene Catálogo y Perfil habilitados; Avisos sigue
+deshabilitado. No se añaden Inicio, Carrito ni favoritos.
 
 La ficha obtiene en una sola consulta la media, el total de votos, el reparto
 de 5 a 1 estrellas y, si existe, la puntuación del socio autenticado. Todos son
@@ -373,6 +373,36 @@ El runner usa su propia base PostgreSQL de pruebas y aplica allí las migracione
 No debe configurarse para apuntar a la base real. La restauración visual del
 desplazamiento se comprueba manualmente en el navegador.
 
+## Perfil del socio
+
+`/perfil/` muestra únicamente nombre completo y número del socio autenticado,
+incluidos los ceros iniciales del número. No admite identificadores de otros
+socios en la ruta ni toma esos datos de parámetros GET/POST. Es una pantalla
+de consulta; no permite editar nombre, teléfono ni otros datos.
+
+Reutiliza cabecera, iconos, estilos dark/neón y navegación del catálogo, con un
+CSS específico para la tarjeta de datos y acciones. La navegación resalta Perfil
+cuando corresponde. El botón «Cambiar contraseña» enlaza a `/cambiar-password/`
+y el cierre de sesión envía POST con CSRF a `/salir/`.
+
+El cambio voluntario conserva el flujo existente: exige la contraseña actual,
+valida la nueva, mantiene la sesión y vuelve al catálogo para socios activos.
+No se altera el cambio obligatorio del primer acceso. Los socios caducados o
+con cambio pendiente mantienen sus redirecciones; administradores y cuentas sin
+perfil no acceden a este espacio. Las respuestas conservan `no-store`.
+
+Para comprobarlo, iniciar el servidor habitual, entrar como socio activo y
+pulsar Perfil desde el catálogo o una ficha. Revisar los datos propios y probar
+las acciones con una cuenta destinada a pruebas. Las pruebas automatizadas usan
+una base independiente:
+
+```sh
+python manage.py test socios.tests.test_perfil socios.tests.test_auth geneticas.tests.test_catalogo geneticas.tests.test_detalle
+```
+
+No se han creado modelos, migraciones ni ejecutado modificaciones sobre la base
+real para incorporar esta sección.
+
 ## Autenticación de socios
 
 - `/acceso/`: número de socio (`User.username`) y contraseña, mediante
@@ -381,6 +411,7 @@ desplazamiento se comprueba manualmente en el navegador.
   mediante `PasswordChangeForm` y `PasswordChangeView`.
 - `/`: redirección al catálogo para socios activos después del cambio obligatorio.
 - `/catalogo/`: catálogo de genéticas activas.
+- `/perfil/`: datos del socio autenticado y acceso a las acciones de cuenta.
 - `/cuota-caducada/`: aviso «Tu cuota de socio está caducada. Contacta con el club para renovarla».
 - `/salir/`: cierre de sesión mediante POST con token CSRF.
 

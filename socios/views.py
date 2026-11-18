@@ -1,4 +1,4 @@
-"""Acceso y página provisional de socios."""
+"""Acceso y perfil privado de socios."""
 from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
 from django.db import transaction
 from django.shortcuts import redirect, render
@@ -57,3 +57,13 @@ def inicio(request):
 @require_safe
 def caducado(request):
     return render(request, "socios/caducado.html")
+
+
+@require_safe
+def perfil(request):
+    # El middleware aporta el perfil del usuario autenticado. No se aceptan IDs.
+    return render(request, "socios/perfil.html", {
+        "nombre_completo": request.socio.nombre_completo,
+        "numero_socio": request.user.get_username(),
+        "perfil_activo": True,
+    })

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Mi perfil · Ketama{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/catalogo.css' %}?v=perfil-1">
+<link rel="stylesheet" href="{% static 'css/perfil.css' %}">
+{% endblock %}
+{% block body_class %}catalogo-page perfil-page{% endblock %}
+{% block main_class %}catalogo-main{% endblock %}
+{% block before_main %}
+{% include "geneticas/_iconos.html" %}
+<a class="catalogo-saltar" href="#contenido">Saltar al perfil</a>
+{% endblock %}
+{% block content %}
+{% include "geneticas/_cabecera.html" %}
+<h1 class="catalogo-titulo">Mi perfil</h1>
+<section class="perfil-tarjeta" aria-labelledby="perfil-datos-titulo">
+    <div class="perfil-avatar" aria-hidden="true"><svg><use href="#ketama-perfil"/></svg></div>
+    <p class="perfil-etiqueta">Tu espacio en Ketama</p>
+    <h2 id="perfil-datos-titulo">Datos de socio</h2>
+    <dl class="perfil-datos">
+        <div><dt>Nombre completo</dt><dd>{{ nombre_completo }}</dd></div>
+        <div><dt>Número de socio</dt><dd class="perfil-numero">{{ numero_socio }}</dd></div>
+    </dl>
+    <p class="perfil-nota">Tus datos de socio se gestionan en el club.</p>
+</section>
+<div class="perfil-acciones">
+    <a class="perfil-password" href="{% url 'socios:cambiar_password' %}">Cambiar contraseña <span aria-hidden="true">→</span></a>
+    <form method="post" action="{% url 'socios:logout' %}">
+        {% csrf_token %}
+        <button class="perfil-salir" type="submit"><svg aria-hidden="true"><use href="#ketama-salir"/></svg>Cerrar sesión</button>
+    </form>
+</div>
+{% endblock %}
+{% block after_main %}{% include "geneticas/_navegacion.html" %}{% endblock %}

@@ -1,0 +1,19 @@
+.perfil-tarjeta { padding: 1.4rem; border: 1px solid transparent; border-radius: 1.25rem; background: linear-gradient(140deg, #19251e, #15151e) padding-box, linear-gradient(135deg, #8dce60aa, #59645766 50%, #bc70d6aa) border-box; box-shadow: 0 15px 40px #0006, inset 0 1px 0 #ffffff05; }
+.perfil-avatar { display: grid; place-items: center; width: 4.5rem; height: 4.5rem; margin-bottom: 1.2rem; border: 1px solid #a9e56680; border-radius: 50%; color: #b4ee7b; background: radial-gradient(ellipse at 20% 20%, #9ad75624, #7c3e8f1c); box-shadow: 0 0 25px #9ce35f14; }
+.perfil-avatar svg { width: 2rem; height: 2rem; }
+.perfil-etiqueta { margin: 0 0 .35rem; color: #b9d5a7; font-size: .7rem; letter-spacing: .09em; text-transform: uppercase; }
+.perfil-tarjeta h2 { margin: 0; font-size: 1.4rem; letter-spacing: -.025rem; }
+.perfil-datos { margin: 1.5rem 0 0; }
+.perfil-datos > div { padding: 1rem 0; border-top: 1px solid #a49aaa26; }
+.perfil-datos dt { margin-bottom: .45rem; color: #b3beb6; font-size: .8rem; }
+.perfil-datos dd { margin: 0; color: #f0f4ee; font-size: 1.15rem; font-weight: 600; overflow-wrap: anywhere; }
+.perfil-datos .perfil-numero { color: var(--lima); font-size: 1.4rem; letter-spacing: .04em; }
+.perfil-nota { margin: .7rem 0 0; color: #a7b3aa; font-size: .8rem; line-height: 1.6; }
+.perfil-acciones { display: grid; gap: .8rem; margin-top: 1.3rem; }
+.perfil-acciones form { margin: 0; }
+.perfil-page .perfil-password, .perfil-page .perfil-salir { display: flex; align-items: center; justify-content: center; gap: .75rem; width: 100%; min-height: 3.2rem; padding: .8rem 1rem; border-radius: .75rem; font: inherit; font-size: .95rem; }
+.perfil-page .perfil-password { border: 1px solid #bcf880; color: #10210d; background: linear-gradient(115deg, #b6f275, #87d87f); box-shadow: 0 5px 20px #89df6118; font-weight: 750; text-decoration: none; }
+.perfil-page .perfil-password:hover { box-shadow: 0 5px 25px #a0f07530; }
+.perfil-page .perfil-salir { border: 1px solid #657167; color: #d9e0db; background: #18221b50; cursor: pointer; }
+.perfil-page .perfil-salir:hover { border-color: #bf8ed2; background: #bd69d60d; }
+@media (min-width: 480px) { .perfil-tarjeta { padding: 1.8rem; } }
