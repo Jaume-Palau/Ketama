@@ -1,0 +1,7 @@
+/* El SVG tiene geometría y colores propios incluso sin esta hoja de estilos. */
+.catalogo-page .nivel-precio { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; }
+.catalogo-page .nivel-precio-etiqueta { color: #c4d0bf; font-size: .7rem; font-weight: 500; line-height: 1.3; }
+.catalogo-page svg.nivel-precio-barra { display: block; width: 9.25rem; max-width: 100%; height: 1rem; flex: none; overflow: visible; }
+.catalogo-page .nivel-precio-segmento.relleno { filter: drop-shadow(0 0 2px #aeef5666); }
+.catalogo-page .nivel-precio-no-disponible { color: #b4b4bf; font-size: .7rem; font-weight: 400; line-height: 1.4; }
+.detalle-page .detalle-dato-precio .nivel-precio { align-items: center; }

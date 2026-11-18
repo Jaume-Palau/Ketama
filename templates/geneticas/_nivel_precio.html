@@ -1,0 +1,8 @@
+<div class="nivel-precio">
+    <span class="nivel-precio-etiqueta">Nivel de precio</span>
+    {% if nivel is not None %}
+    <svg class="nivel-precio-barra" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 148 16" width="148" height="16" style="display:block;width:148px;height:16px;max-width:100%;flex:none" role="img" aria-label="Nivel de precio: {{ nivel }} de 5" focusable="false">
+        {% for segmento in segmentos %}<rect class="nivel-precio-segmento{% if segmento.activo %} relleno{% endif %}" x="{{ segmento.x }}" y="2" width="26" height="12" rx="3" fill="{% if segmento.activo %}#aeef56{% else %}#35403d{% endif %}" stroke="{% if segmento.activo %}#c6ff87{% else %}#65716a{% endif %}" stroke-width="1" aria-hidden="true"/>{% endfor %}
+    </svg>
+    {% else %}<span class="nivel-precio-no-disponible">Nivel no disponible</span>{% endif %}
+</div>

@@ -47,7 +47,7 @@ class DetalleTests(TestCase):
         response = self.client.get(self.url())
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "geneticas/detalle.html")
-        for texto in ("Purple ficticia", "Índica", "8,00", "€/g", "22", "0,60", "THC", "CBD", "4,0", "2 valoraciones"):
+        for texto in ("Purple ficticia", "Índica", "Nivel de precio", "22", "0,60", "THC", "CBD", "4,0", "2 valoraciones"):
             # floatformat -2 elimina ceros solo en enteros; conserva 0,60.
             self.assertContains(response, texto)
         self.assertContains(response, "Descripción ficticia.<br>Segunda línea.")
@@ -67,7 +67,7 @@ class DetalleTests(TestCase):
     def test_sin_datos_opcionales_no_inventa_valores(self):
         response = self.client.get(self.url(self.sin_datos))
         self.assertContains(response, "Imagen no disponible")
-        self.assertContains(response, "Precio no disponible")
+        self.assertContains(response, "Nivel no disponible")
         self.assertContains(response, "No informado", count=2)
         self.assertContains(response, "Sin valoraciones")
         self.assertContains(response, "0 votos")
@@ -76,15 +76,16 @@ class DetalleTests(TestCase):
         self.assertIsNone(response.context["genetica"].mi_puntuacion)
         self.assertTrue(all(fila["porcentaje"] == 0 for fila in response.context["distribucion"]))
 
-    def test_valores_cero_y_precio_por_unidad_se_respetan(self):
+    def test_valores_cero_se_respetan_y_precio_por_unidad_solo_muestra_nivel(self):
         Genetica.objects.filter(pk=self.sin_datos.pk).update(
             precio=0, unidad_precio=Genetica.UnidadPrecio.UNIDAD, thc=0, cbd=0
         )
         response = self.client.get(self.url(self.sin_datos))
-        self.assertContains(response, "0,00")
-        self.assertContains(response, "€/ud.")
+        self.assertContains(response, 'aria-label="Nivel de precio: 1 de 5"')
+        self.assertNotContains(response, "0,00")
+        self.assertNotContains(response, "€")
         self.assertNotContains(response, "No informado")
-        self.assertNotContains(response, "Precio no disponible")
+        self.assertNotContains(response, "Nivel no disponible")
 
     def test_genetica_inactiva_o_inexistente_devuelve_404(self):
         self.assertEqual(self.client.get(self.url(self.inactiva)).status_code, 404)

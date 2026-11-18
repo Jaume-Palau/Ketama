@@ -1,4 +1,6 @@
 """Catálogo, fichas privadas y envío de valoraciones de los socios."""
+from types import SimpleNamespace
+
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -14,6 +16,21 @@ from socios.models import Socio
 
 from .forms import ValoracionForm
 from .models import Genetica, Valoracion
+from .precios import nivel_precio_sql, segmentos_nivel_precio
+
+
+CAMPOS_CATALOGO = (
+    "pk", "nombre", "imagen", "clasificacion", "nivel_precio", "media_catalogo", "votos_catalogo",
+)
+
+
+def presentacion_socio(datos):
+    """Datos públicos sin instancia ORM ni acceso diferido al importe exacto."""
+    return SimpleNamespace(
+        **datos,
+        segmentos_precio=segmentos_nivel_precio(datos["nivel_precio"]),
+        clasificacion_etiqueta=dict(Genetica.Clasificacion.choices).get(datos["clasificacion"], ""),
+    )
 
 
 def opciones_catalogo(request):
@@ -55,7 +72,9 @@ def catalogo(request):
     geneticas = geneticas.annotate(
         media_catalogo=Avg("valoraciones__puntuacion"),
         votos_catalogo=Count("valoraciones"),
-    ).order_by(*ordenaciones[orden])
+        nivel_precio=nivel_precio_sql(),
+    ).order_by(*ordenaciones[orden]).values(*CAMPOS_CATALOGO)
+    geneticas = [presentacion_socio(datos) for datos in geneticas]
 
     parametros = consulta_catalogo(busqueda, clasificacion, orden)
     filtros = []
@@ -85,6 +104,7 @@ def detalle(request, pk):
 
 def renderizar_detalle(request, pk, formulario=None, status=200):
     agregaciones = {
+        "nivel_precio": nivel_precio_sql(),
         "media_catalogo": Avg("valoraciones__puntuacion"),
         "votos_catalogo": Count("valoraciones"),
         "mi_puntuacion": Max(
@@ -96,9 +116,11 @@ def renderizar_detalle(request, pk, formulario=None, status=200):
         agregaciones[f"votos_{puntuacion}"] = Count(
             "valoraciones", filter=Q(valoraciones__puntuacion=puntuacion)
         )
-    genetica = get_object_or_404(
-        Genetica.objects.filter(activo=True).annotate(**agregaciones), pk=pk
-    )
+    campos = (*CAMPOS_CATALOGO, "thc", "cbd", "descripcion", "mi_puntuacion",
+              *(f"votos_{numero}" for numero in range(1, 6)))
+    genetica = presentacion_socio(get_object_or_404(
+        Genetica.objects.filter(activo=True).annotate(**agregaciones).values(*campos), pk=pk
+    ))
     distribucion = []
     for puntuacion in range(5, 0, -1):
         votos = getattr(genetica, f"votos_{puntuacion}")

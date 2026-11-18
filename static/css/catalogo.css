@@ -82,9 +82,7 @@
 .genetica-valoracion strong { font-weight: 650; }
 .genetica-votos { color: var(--suave); font-size: .85rem; }
 .genetica-valoracion.sin-votos { color: var(--suave); font-size: .8rem; }
-.genetica-precio { margin: 0; padding-left: .8rem; border-left: 1px solid #6d7279; font-size: clamp(1.1rem, 4.6vw, 1.5rem); font-weight: 750; color: var(--lima); white-space: nowrap; }
-.genetica-precio span:not(.catalogo-solo-lector) { font-size: .85em; }
-.genetica-precio.sin-precio { white-space: normal; font-size: .75rem; font-weight: 400; color: var(--suave); }
+.genetica-precio { margin: 0; padding-left: .8rem; border-left: 1px solid #6d7279; }
 .catalogo-vacio { padding: 2.5rem 1.2rem; text-align: center; border: 1px solid #4c5a4050; border-radius: 1rem; background: linear-gradient(140deg, #19301c35, #29172c25); }
 .catalogo-vacio svg { width: 3.7rem; height: 3.7rem; margin: 0 auto; color: var(--lima); }
 .catalogo-vacio h2 { font-size: 1.3rem; margin-top: 1.2rem; }

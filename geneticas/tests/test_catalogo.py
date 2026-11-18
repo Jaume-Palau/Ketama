@@ -104,14 +104,15 @@ class CatalogoTests(TestCase):
         self.assertEqual(response.context["orden"], "valoracion")
         self.assertEqual(self.ids(response)[:2], [self.indica.pk, self.sativa.pk])
 
-    def test_datos_ausentes_cero_y_unidades_reales_se_muestran_correctamente(self):
+    def test_datos_ausentes_y_niveles_se_muestran_sin_importes(self):
         response = self.client.get(reverse("geneticas:catalogo"))
         self.assertContains(response, "Imagen no disponible")
-        self.assertContains(response, "Precio no disponible")
+        self.assertContains(response, "Nivel no disponible")
         self.assertContains(response, "Sin valoraciones")
-        self.assertContains(response, "0,00")
-        self.assertContains(response, "€/g")
-        self.assertContains(response, "€/ud.")
+        self.assertContains(response, "Nivel de precio")
+        self.assertContains(response, 'aria-label="Nivel de precio: 1 de 5"')
+        self.assertNotContains(response, "€")
+        self.assertNotContains(response, "0,00")
         self.assertContains(response, 'aria-disabled="true"', count=2)
         self.assertContains(response, 'action="' + reverse("socios:logout") + '"')
 

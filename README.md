@@ -248,10 +248,25 @@ consulta del listado. La media más alta va primero; en caso de empate se usa
 el número de votos y el nombre. Las genéticas sin votos se muestran al final.
 Los precios desconocidos van al final en ambos órdenes de precio.
 
-La interfaz distingue precio desconocido de precio 0 y respeta `unidad_precio`:
-`gramo` se muestra como €/g y `unidad` como €/ud. Sin votos aparece «Sin valoraciones»;
-sin imagen aparece un marcador, también si la URL externa falla. No se inventan
-precios, imágenes ni puntuaciones. Cada tarjeta enlaza a su ficha completa.
+La interfaz de socios muestra «Nivel de precio» con una barra de cinco segmentos,
+sin importes, rangos ni símbolos monetarios. Un precio 0 pertenece al primer
+nivel; un precio no informado muestra «Nivel no disponible». Los límites se
+centralizan en `geneticas/precios.py` y se calculan como decimales en PostgreSQL.
+La ordenación ascendente/descendente sigue usando el precio real, también cuando
+dos genéticas comparten nivel. El precio exacto y la unidad se conservan en Admin.
+
+Las vistas seleccionan únicamente los campos públicos y el nivel calculado;
+las plantillas reciben objetos de presentación sin `precio`, `unidad_precio` ni
+acceso diferido al ORM. No se incluyen importes en atributos, campos ocultos,
+JSON o JavaScript. Ambas pantallas utilizan `geneticas/_nivel_precio.html`.
+La barra es un SVG con cinco rectángulos, separación y esquinas redondeadas.
+Cada rectángulo lleva dimensiones y color propios (verde para los activos,
+gris para los restantes), por lo que no depende de estilos de elementos vacíos.
+La hoja específica `nivel_precio.css?v=2` añade el acabado neón y utiliza una URL
+nueva para evitar reutilizar el CSS anterior. Un precio de nivel 2 genera
+exactamente dos rectángulos verdes y tres grises.
+Sin votos aparece «Sin valoraciones»; sin imagen aparece un marcador, también
+si la URL externa falla. Cada tarjeta enlaza a su ficha completa.
 
 El CSS del catálogo se comparte con la ficha detallada. La autenticación conserva
 sus estilos existentes. La búsqueda y ordenación funcionan sin JavaScript,
@@ -280,10 +295,20 @@ en `http://127.0.0.1:8000/catalogo/`. Las pruebas se pueden ejecutar con
 aplica migraciones en esa base de pruebas. No se ejecutan migraciones reales
 como parte de esta implementación del catálogo.
 
+Pruebas específicas del indicador y su llegada a catálogo y detalle:
+
+```sh
+python manage.py test geneticas.tests.test_indicador_precio geneticas.tests.test_nivel_precio
+```
+
+Las primeras prueban la plantilla sin base de datos; las de integración utilizan
+solo la base de pruebas. Se inspeccionan los cinco rectángulos del HTML, colores,
+dimensiones, relleno por nivel, límites y ausencia de importes públicos.
+
 ## Ficha detallada de genéticas
 
-`/catalogo/<id>/` muestra una única fotografía, nombre, clasificación, precio y
-unidad, THC, CBD, descripción y el resumen de valoraciones de una genética activa.
+`/catalogo/<id>/` muestra una única fotografía, nombre, clasificación, nivel de
+precio, THC, CBD, descripción y el resumen de valoraciones de una genética activa.
 La referencia visual es `design/referencias/Ficha Purple Punch en Ketama.png`.
 Se reutilizan cabecera, iconos, etiquetas de clasificación, marcador de imagen y
 barra inferior. Esta mantiene Catálogo, Avisos y Perfil; las dos últimas secciones
@@ -310,8 +335,9 @@ Tras guardar, redirige a la ficha con una confirmación junto al formulario y
 recalcula media, recuento y distribución. Refrescar ese GET no reenvía la valoración.
 Los parámetros de búsqueda, clasificación y ordenación se conservan.
 
-Precio, THC y CBD vacíos se muestran como no disponibles/informados, mientras que
-un 0 real se conserva. Una URL de imagen fallida muestra el mismo marcador que
+El precio vacío se muestra como «Nivel no disponible»; un 0 real se representa
+con nivel 1. THC y CBD vacíos se muestran como no informados y sus valores 0 se
+conservan. Una URL de imagen fallida muestra el mismo marcador que
 una imagen no informada. Las descripciones se escapan y conservan los saltos
 de línea, sin interpretar HTML almacenado.
 

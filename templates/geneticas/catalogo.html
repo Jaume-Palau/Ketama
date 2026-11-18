@@ -3,6 +3,7 @@
 {% block title %}Catálogo · Ketama{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/catalogo.css' %}">
+<link rel="stylesheet" href="{% static 'css/nivel_precio.css' %}?v=2">
 <script src="{% static 'js/catalogo.js' %}" defer></script>
 {% endblock %}
 {% block body_class %}catalogo-page{% endblock %}
@@ -59,7 +60,7 @@
                 <div class="genetica-identidad">
                     <h2 id="genetica-{{ genetica.pk }}">{{ genetica.nombre }}</h2>
                     <span class="genetica-tipo tipo-{{ genetica.clasificacion }}">
-                        <svg aria-hidden="true"><use href="#ketama-hoja"/></svg>{{ genetica.get_clasificacion_display }}
+                        <svg aria-hidden="true"><use href="#ketama-hoja"/></svg>{{ genetica.clasificacion_etiqueta }}
                     </span>
                 </div>
                 <div class="genetica-pie">
@@ -70,11 +71,7 @@
                         <span class="genetica-votos">({{ genetica.votos_catalogo }})</span>
                     </p>
                     {% else %}<p class="genetica-valoracion sin-votos"><span class="genetica-estrella" aria-hidden="true">☆</span>Sin valoraciones</p>{% endif %}
-                    <p class="genetica-precio{% if genetica.precio is None %} sin-precio{% endif %}">
-                        {% if genetica.precio is not None %}
-                        <span class="catalogo-solo-lector">Precio: </span>{{ genetica.precio|floatformat:"2" }}<span> €/{% if genetica.unidad_precio == 'gramo' %}g{% else %}ud.{% endif %}</span>
-                        {% else %}Precio no disponible{% endif %}
-                    </p>
+                    <div class="genetica-precio">{% include "geneticas/_nivel_precio.html" with nivel=genetica.nivel_precio segmentos=genetica.segmentos_precio only %}</div>
                 </div>
             </div>
             </a>
