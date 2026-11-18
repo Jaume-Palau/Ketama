@@ -3,6 +3,7 @@ from django.http import HttpResponse
 from django.urls import include, path
 
 from config.urls import urlpatterns as rutas_proyecto
+from comunicacion.urls import urlpatterns as rutas_comunicacion
 
 
 def privada(request):
@@ -10,10 +11,11 @@ def privada(request):
 
 
 urlpatterns = [
-    path("prueba-catalogo/", include(([
-        path("", privada, name="inicio"),
-        path("accion/", privada, name="accion"),
-        path("login/", privada, name="login"),
+    path("avisos/", include(([
+        *rutas_comunicacion,
+        path("prueba/", privada, name="inicio"),
+        path("prueba/accion/", privada, name="accion"),
+        path("prueba/login/", privada, name="login"),
     ], "comunicacion"), namespace="comunicacion")),
-    *rutas_proyecto,
+    *(ruta for ruta in rutas_proyecto if getattr(ruta, "namespace", None) != "comunicacion"),
 ]

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Avisos · Ketama{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/catalogo.css' %}?v=perfil-1">
+<link rel="stylesheet" href="{% static 'css/avisos.css' %}">
+{% endblock %}
+{% block body_class %}catalogo-page avisos-page{% endblock %}
+{% block main_class %}catalogo-main{% endblock %}
+{% block before_main %}
+{% include "geneticas/_iconos.html" %}
+<a class="catalogo-saltar" href="#contenido">Saltar a los avisos</a>
+{% endblock %}
+{% block content %}
+{% include "geneticas/_cabecera.html" %}
+<h1 class="catalogo-titulo">Avisos</h1>
+<p class="avisos-introduccion">Las novedades y comunicados de tu club.</p>
+<section class="avisos-lista" aria-label="Avisos publicados">
+    {% for aviso in avisos %}
+    <article class="aviso-tarjeta" aria-labelledby="aviso-{{ aviso.pk }}">
+        <div class="aviso-fecha">
+            <svg aria-hidden="true"><use href="#ketama-avisos"/></svg>
+            <time datetime="{{ aviso.fecha_creacion|date:'c' }}">{{ aviso.fecha_creacion|date:"d M Y · H:i" }}</time>
+        </div>
+        <h2 id="aviso-{{ aviso.pk }}">{{ aviso.titulo }}</h2>
+        <div class="aviso-mensaje">{{ aviso.mensaje|linebreaksbr }}</div>
+    </article>
+    {% empty %}
+    <div class="catalogo-vacio">
+        <svg aria-hidden="true"><use href="#ketama-avisos"/></svg>
+        <h2>Todavía no hay avisos</h2>
+        <p>Cuando el club publique un comunicado, aparecerá aquí.</p>
+    </div>
+    {% endfor %}
+</section>
+{% endblock %}
+{% block after_main %}{% include "geneticas/_navegacion.html" %}{% endblock %}

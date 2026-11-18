@@ -113,7 +113,8 @@ class CatalogoTests(TestCase):
         self.assertContains(response, 'aria-label="Nivel de precio: 1 de 5"')
         self.assertNotContains(response, "€")
         self.assertNotContains(response, "0,00")
-        self.assertContains(response, 'aria-disabled="true"', count=1)
+        self.assertNotContains(response, 'aria-disabled="true"')
+        self.assertContains(response, 'href="' + reverse("comunicacion:avisos") + '"')
         self.assertContains(response, 'href="' + reverse("socios:perfil") + '"')
         self.assertContains(response, 'action="' + reverse("socios:logout") + '"')
 

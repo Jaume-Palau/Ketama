@@ -92,7 +92,8 @@ class PerfilTests(TestCase):
             with self.subTest(url=url):
                 response = self.client.get(url)
                 self.assertContains(response, 'href="' + self.url + '"')
-                self.assertContains(response, 'aria-disabled="true"', count=1)
+                self.assertNotContains(response, 'aria-disabled="true"')
+                self.assertContains(response, 'href="' + reverse("comunicacion:avisos") + '"')
                 if url == self.url:
                     self.assertContains(response, 'href="' + self.url + '" aria-current="page"')
                     self.assertNotContains(response, 'href="' + reverse("geneticas:catalogo") + '" aria-current=')

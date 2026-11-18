@@ -6,7 +6,7 @@ La referencia de alcance es [ESPECIFICACION_PROYECTO.md](ESPECIFICACION_PROYECTO
 ## Estado actual
 
 Está creado el esqueleto y el modelo `Socio`, vinculado al usuario nativo de
-Django. `geneticas` incluye el catálogo privado; `comunicacion` aún no tiene pantallas.
+Django. `geneticas` incluye el catálogo privado y `comunicacion`, los avisos publicados.
 El espacio de socios incluye acceso, cambio de contraseña, cierre de sesión y
 el catálogo como pantalla inicial. El panel de gestión conserva su entrada `/admin/`.
 La migración `0004_socio_estado` está preparada sin aplicar.
@@ -272,8 +272,8 @@ El CSS del catálogo se comparte con la ficha detallada. La autenticación conse
 sus estilos existentes. La búsqueda y ordenación funcionan sin JavaScript,
 mediante los botones Buscar/Aplicar; el JavaScript gestiona imágenes fallidas y
 la restauración del desplazamiento al regresar de una ficha.
-La barra inferior permite navegar entre Catálogo y Perfil. Avisos permanece
-deshabilitado, sin enlaces rotos. El encabezado mantiene un cierre de sesión POST.
+La barra inferior permite navegar entre Catálogo, Avisos y Perfil, resaltando la
+sección actual. El encabezado mantiene un cierre de sesión POST.
 
 El acceso de socios activos y el cambio de contraseña completado llevan al
 catálogo; `/` también redirige allí después de pasar el control de acceso.
@@ -311,8 +311,8 @@ dimensiones, relleno por nivel, límites y ausencia de importes públicos.
 precio, THC, CBD, descripción y el resumen de valoraciones de una genética activa.
 La referencia visual es `design/referencias/Ficha Purple Punch en Ketama.png`.
 Se reutilizan cabecera, iconos, etiquetas de clasificación, marcador de imagen y
-barra inferior. Esta mantiene Catálogo y Perfil habilitados; Avisos sigue
-deshabilitado. No se añaden Inicio, Carrito ni favoritos.
+barra inferior. Esta mantiene Catálogo, Avisos y Perfil habilitados.
+No se añaden Inicio, Carrito ni favoritos.
 
 La ficha obtiene en una sola consulta la media, el total de votos, el reparto
 de 5 a 1 estrellas y, si existe, la puntuación del socio autenticado. Todos son
@@ -372,6 +372,39 @@ python manage.py test geneticas.tests.test_detalle geneticas.tests.test_catalogo
 El runner usa su propia base PostgreSQL de pruebas y aplica allí las migraciones.
 No debe configurarse para apuntar a la base real. La restauración visual del
 desplazamiento se comprueba manualmente en el navegador.
+
+## Avisos del club
+
+`comunicacion.Aviso` contiene título y mensaje obligatorios, fecha de creación
+automática y `activo` (publicado). Los nuevos avisos son borradores por defecto.
+En Django Admin se pueden crear, editar, eliminar y publicar/ocultar; la casilla
+de publicación se puede cambiar desde el listado, que muestra título y fecha.
+No se envían notificaciones automáticas al publicar o editar.
+
+`/avisos/` muestra solo los avisos publicados, ordenados por fecha descendente
+y, para empates, por identificador descendente. Conserva los saltos de línea y
+escapa HTML en título y mensaje. Si no hay avisos publicados, muestra un estado
+vacío. La sección reutiliza cabecera, iconos, navegación y estética del catálogo,
+con un CSS propio para las tarjetas. No permite escrituras desde la vista de socios.
+
+Se mantienen los permisos existentes: cuenta habilitada, perfil de socio activo
+y cambio de contraseña completado. Los caducados ven su aviso de cuota, los
+pendientes deben cambiar su contraseña y los administradores usan Django Admin.
+No hay cambios en el middleware ni en la autenticación.
+
+La migración `comunicacion/0001_initial.py` está preparada sin aplicar. Después
+de revisarla, la preparación manual y las pruebas se pueden realizar con:
+
+```sh
+python manage.py migrate comunicacion --plan
+python manage.py migrate comunicacion
+python manage.py test comunicacion socios geneticas
+```
+
+No se han ejecutado migraciones ni cambios reales durante esta implementación.
+El runner de pruebas usa su propia base independiente. Para comprobar la sección
+en el navegador tras preparar la base, publicar un aviso desde Admin en el entorno
+de pruebas e iniciar sesión como socio activo para abrir Avisos desde la barra.
 
 ## Perfil del socio
 

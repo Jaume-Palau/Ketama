@@ -1,0 +1,8 @@
+.avisos-introduccion { margin: -.3rem 0 1.4rem; color: #b3beb6; font-size: .9rem; line-height: 1.6; }
+.avisos-lista { display: grid; gap: 1.1rem; }
+.aviso-tarjeta { padding: 1.25rem; border: 1px solid transparent; border-radius: 1.15rem; background: linear-gradient(135deg, #19251d, #16151e) padding-box, linear-gradient(135deg, #8dcf6377, #55654d44 40%, #bd72d288) border-box; box-shadow: 0 10px 30px #0006, inset 0 1px 0 #ffffff05; }
+.aviso-fecha { display: flex; align-items: center; gap: .5rem; color: #b6c3b7; font-size: .75rem; }
+.aviso-fecha svg { width: 1rem; height: 1.15rem; color: var(--lima); }
+.aviso-tarjeta h2 { margin: .85rem 0 .7rem; color: #f1f5ef; font-size: 1.3rem; line-height: 1.35; letter-spacing: -.025rem; overflow-wrap: anywhere; }
+.aviso-mensaje { color: #d0d7d1; font-size: .95rem; line-height: 1.75; overflow-wrap: anywhere; }
+@media (min-width: 480px) { .aviso-tarjeta { padding: 1.6rem; } }
