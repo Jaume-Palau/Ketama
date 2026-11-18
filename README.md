@@ -42,6 +42,85 @@ no se implementan fechas de caducidad, pagos ni renovación automática.
 El comando de importación CSV está preparado; no se ha ejecutado ninguna
 importación real durante su desarrollo.
 
+## Protección de los accesos con django-axes
+
+`django-axes==9.0.0` protege `/acceso/` y `/admin/login/` mediante los backends
+nativos de autenticación. Ambos formularios utilizan `username`: número de socio
+(conservando ceros iniciales) o nombre del administrador. Axes se ejecuta antes
+de `ModelBackend` y su middleware es el último de la lista, según la
+[documentación de Axes 9.0](https://django-axes.readthedocs.io/en/stable/2_installation.html).
+
+Al quinto fallo de credenciales se bloquea ese usuario durante 15 minutos.
+Los fallos se suman entre ambos accesos y desde distintas IP, navegadores o
+sesiones. Otro usuario en la misma IP conserva su acceso. Los reintentos durante
+el bloqueo no prolongan su duración; un acceso correcto reinicia el contador.
+La expiración se comprueba en las siguientes peticiones, sin tareas programadas.
+No se desactiva `User.is_active`, no se cierran sesiones existentes ni se cambian
+contraseñas o el requisito de cambio obligatorio. Al bloquear por nombre, alguien
+que lo conozca puede provocar un bloqueo temporal de esa cuenta.
+
+El handler de base de datos guarda los intentos en PostgreSQL para compartirlos
+entre todos los procesos Gunicorn; no utiliza caché local ni requiere Redis.
+No se guardan IPs reales: `0.0.0.0` es un marcador técnico fijo que no participa
+en la decisión de bloqueo. No se habilita historial de accesos correctos ni un
+registro adicional por cada fallo. Los registros de intentos contienen el
+usuario necesario para el contador; Axes enmascara la contraseña del formulario.
+
+La pantalla de bloqueo reutiliza `login.css`, devuelve HTTP 429 y no muestra
+usuario ni contraseña, también si la petición lleva `XMLHttpRequest`. La respuesta
+es privada y no debe almacenarse en caché.
+
+Axes 9.0 puede mostrar `axes.W006` al ejecutar comprobaciones: aconseja incluir
+la IP en los criterios de bloqueo. Aquí se mantiene deliberadamente
+`AXES_LOCKOUT_PARAMETERS = ["username"]` para respetar la política acordada de
+no bloquear a otros socios de una misma IP. No añadir bloqueo por IP para
+silenciar esta advertencia.
+
+### Preparación y comprobaciones
+
+La dependencia está declarada; esta implementación no instala paquetes ni aplica
+migraciones. En una fase autorizada, instalar los requisitos y aplicar **todas
+las migraciones incluidas por Axes 9.0**, hasta `0010_accessattemptexpiration`:
+
+```sh
+python -m pip install -r requirements.txt
+python manage.py check
+python manage.py migrate axes --plan
+python manage.py migrate axes
+```
+
+No se crean migraciones ni campos en los modelos de Ketama para esta protección.
+Las migraciones pendientes de las otras aplicaciones se revisan por separado.
+No publicar esta configuración antes de instalar Axes y preparar sus tablas.
+
+Pruebas con cuentas ficticias y base independiente del runner, nunca la base real:
+
+```sh
+python manage.py test socios.tests.test_bloqueo
+python manage.py test socios geneticas comunicacion
+```
+
+### Desbloqueo manual desde Django Admin
+
+1. Entrar en `/admin/` con una cuenta administrativa autorizada que no esté bloqueada.
+2. Abrir **Axes → Access attempts / Intentos de acceso** y buscar el `username`
+   exacto; para socios, conservar los ceros iniciales.
+3. Eliminar todos los registros de intentos de ese usuario (puede haber varios
+   por distintos navegadores) y confirmar. Esto reinicia el contador sin eliminar
+   al usuario, su perfil o sus contraseñas. No basta con borrar los registros de
+   historial de accesos.
+4. El usuario ya puede volver a intentar iniciar sesión.
+
+Si la única cuenta administrativa está bloqueada, esperar los 15 minutos o,
+desde una consola autorizada conectada al entorno correcto, ejecutar:
+
+```sh
+python manage.py axes_reset_username NUMERO_O_USUARIO_EXACTO
+```
+
+Este comando modifica únicamente los registros de bloqueo. No ejecutarlo en
+producción sin autorización; no se ha ejecutado durante esta implementación.
+
 ## Importación inicial desde CSV
 
 ### Retirada de teléfonos

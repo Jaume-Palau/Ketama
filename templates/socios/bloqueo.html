@@ -1,0 +1,23 @@
+{% extends "socios/login.html" %}
+{% block title %}Acceso temporalmente limitado · Ketama{% endblock %}
+{% block content %}
+<header class="login-identidad">
+    <div class="login-marca" aria-label="Ketama">
+        <svg aria-hidden="true" focusable="false"><use href="#ketama-hoja"/></svg>
+        <span>Ketama</span>
+    </div>
+    <p class="login-privado"><span aria-hidden="true"></span>Tu club. Tu espacio.</p>
+</header>
+<section class="login-panel" aria-labelledby="login-titulo">
+    <div class="login-panel-cabecera">
+        <p class="login-etiqueta">Seguridad de acceso</p>
+        <h1 id="login-titulo">Acceso temporalmente limitado</h1>
+    </div>
+    <div class="login-alerta" role="alert">
+        <p>Se han realizado demasiados intentos de inicio de sesión.</p>
+        <p>Inténtalo de nuevo cuando hayan transcurrido 15 minutos desde el bloqueo.</p>
+    </div>
+    <p class="login-ayuda"><a href="{{ url_acceso }}">Volver al acceso</a><br>Si necesitas ayuda, contacta con el club.</p>
+</section>
+<p class="login-pie">Un espacio privado, solo para socios.</p>
+{% endblock %}

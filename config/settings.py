@@ -1,5 +1,6 @@
 """Configuración común. Los secretos se reciben del entorno."""
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -28,6 +29,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "axes",
     "socios.apps.SociosConfig",
     "geneticas.apps.GeneticasConfig",
     "comunicacion.apps.ComunicacionConfig",
@@ -42,7 +44,30 @@ MIDDLEWARE = [
     "socios.middleware.AccesoSociosMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Axes procesa las respuestas de autenticación y debe ir al final.
+    "axes.middleware.AxesMiddleware",
 ]
+
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# Contador compartido en PostgreSQL para socios y Admin, nunca por IP.
+AXES_HANDLER = "axes.handlers.database.AxesDatabaseHandler"
+AXES_USERNAME_FORM_FIELD = "username"
+AXES_LOCKOUT_PARAMETERS = ["username"]
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = timedelta(minutes=15)
+AXES_RESET_ON_SUCCESS = True
+AXES_RESET_COOL_OFF_ON_FAILURE_DURING_LOCKOUT = False
+AXES_HTTP_RESPONSE_CODE = 429
+AXES_LOCKOUT_TEMPLATE = "socios/bloqueo.html"
+AXES_LOCKOUT_CALLABLE = "socios.seguridad.respuesta_bloqueo"
+# No necesitamos IPs ni un historial de accesos correctos para esta política.
+AXES_CLIENT_IP_CALLABLE = "socios.seguridad.ip_no_identificativa"
+AXES_DISABLE_ACCESS_LOG = True
+AXES_ENABLE_ACCESS_FAILURE_LOG = False
 
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [
