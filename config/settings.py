@@ -15,12 +15,45 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "")
 if not SECRET_KEY:
     raise ImproperlyConfigured("Define SECRET_KEY en las variables de entorno.")
 
-DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
+DJANGO_ENV = os.environ.get("DJANGO_ENV", "development").strip().lower()
+if DJANGO_ENV not in {"development", "production"}:
+    raise ImproperlyConfigured("DJANGO_ENV debe ser development o production.")
+IS_PRODUCTION = DJANGO_ENV == "production"
+
+DEBUG = os.environ.get("DEBUG", "False").strip().lower() == "true"
+if IS_PRODUCTION and DEBUG:
+    raise ImproperlyConfigured("DEBUG debe ser False en producción.")
+
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    for host in os.environ.get(
+        "ALLOWED_HOSTS", "" if IS_PRODUCTION else "localhost,127.0.0.1"
+    ).split(",")
     if host.strip()
 ]
+if IS_PRODUCTION and (not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS):
+    raise ImproperlyConfigured("Define ALLOWED_HOSTS explícitos, sin '*', en producción.")
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if IS_PRODUCTION and any(
+    not origin.startswith("https://") for origin in CSRF_TRUSTED_ORIGINS
+):
+    raise ImproperlyConfigured("Los orígenes CSRF de producción deben utilizar https://.")
+
+SECURE_SSL_REDIRECT = IS_PRODUCTION
+SESSION_COOKIE_SECURE = IS_PRODUCTION
+CSRF_COOKIE_SECURE = IS_PRODUCTION
+# Confiar en esta cabecera solo tras confirmar que el proxy la sobrescribe
+# y que no permite acceder directamente al proceso Django desde Internet.
+TRUST_PROXY_HTTPS = os.environ.get("TRUST_PROXY_HTTPS", "False").strip().lower() == "true"
+SECURE_PROXY_SSL_HEADER = (
+    ("HTTP_X_FORWARDED_PROTO", "https")
+    if IS_PRODUCTION and TRUST_PROXY_HTTPS else None
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",

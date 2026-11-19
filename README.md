@@ -657,6 +657,58 @@ configuración sin aplicar migraciones. El arranque local se hará con
 `python manage.py runserver` después de preparar la base de datos en su fase
 correspondiente. `check` no configura PostgreSQL ni aplica migraciones.
 
+## Seguridad de desarrollo y producción
+
+`DJANGO_ENV` acepta `development` (por defecto) o `production`. Es independiente
+de `DEBUG`: probar con `DEBUG=False` en local no fuerza HTTPS. El `.env` local
+no se modifica; sus hosts permitidos, incluida la IP LAN existente, se conservan.
+
+En desarrollo se mantienen desactivados la redirección HTTPS y los atributos
+Secure de las cookies de sesión y CSRF. Para acceder desde el móvil por Wi-Fi,
+incluir la IP LAN real del ordenador en `ALLOWED_HOSTS` (sin esquema ni puerto),
+ejecutar `python manage.py runserver 0.0.0.0:8000` y abrir desde el móvil
+`http://IP_LAN_REAL:8000`. La IP debe coincidir con la red actual. Un formulario
+servido y enviado al mismo origen no necesita añadir ese origen a
+`CSRF_TRUSTED_ORIGINS`.
+
+Para el futuro servicio de Railway, definir las variables en su configuración:
+
+- `DJANGO_ENV=production` y `DEBUG=False`. El arranque falla si se intenta
+  utilizar `DEBUG=True` en producción o un nombre de entorno desconocido.
+- `SECRET_KEY`: una clave aleatoria exclusiva de producción, fuera de Git.
+- `ALLOWED_HOSTS`: dominios reales autorizados, separados por comas, sin esquema
+  ni puerto. En producción no se aceptan una lista vacía ni el valor `*`.
+- `CSRF_TRUSTED_ORIGINS`: los orígenes adicionales realmente necesarios, con
+  `https://` y sin rutas, separados por comas. Puede permanecer vacío si solo
+  se utiliza el mismo origen y Django reconoce HTTPS correctamente. No reemplaza
+  `ALLOWED_HOSTS` ni deshabilita CSRF.
+- `TRUST_PROXY_HTTPS=True`: solo después de verificar que el proxy de Railway
+  elimina/sobrescribe la cabecera enviada por el cliente y establece
+  `X-Forwarded-Proto`, y que Django no admite tráfico público que evite ese proxy.
+  Habilita `SECURE_PROXY_SSL_HEADER` únicamente en producción. Confiar en una
+  cabecera controlable por el cliente permitiría falsear el esquema seguro.
+
+En producción `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE` y
+`CSRF_COOKIE_SECURE` se activan automáticamente. Tras verificar el proxy, una
+petición HTTPS externa debe reconocerse como segura y no entrar en un bucle
+de redirecciones. No se inventa ni configura todavía ningún dominio de Railway.
+Los ajustes siguen las [recomendaciones de Django 5.2](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/).
+
+Comprobaciones sin migraciones ni acceso a la base de datos en estas pruebas:
+
+```sh
+python manage.py test config.tests
+python manage.py check
+```
+
+Las pruebas de configuración usan variables ficticias en memoria, ignoran `.env`
+y comprueban HTTP local/Wi-Fi, HTTPS, proxy, cookies y rechazo de ajustes inseguros.
+Antes del despliegue, con las variables de producción reales definidas, ejecutar
+`python manage.py check --deploy`. Se revisan sus avisos por separado: HSTS sigue
+sin habilitarse hasta comprobar dominio y HTTPS; Axes puede emitir la advertencia
+`axes.W006` documentada anteriormente por el bloqueo deliberado solo por usuario.
+Esta preparación no configura Gunicorn, estáticos, PostgreSQL ni un despliegue.
+
 ## Fases posteriores
 
 Catálogo, valoraciones, noticias y eventos, PWA y push
