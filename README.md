@@ -707,7 +707,63 @@ Antes del despliegue, con las variables de producción reales definidas, ejecuta
 `python manage.py check --deploy`. Se revisan sus avisos por separado: HSTS sigue
 sin habilitarse hasta comprobar dominio y HTTPS; Axes puede emitir la advertencia
 `axes.W006` documentada anteriormente por el bloqueo deliberado solo por usuario.
-Esta preparación no configura Gunicorn, estáticos, PostgreSQL ni un despliegue.
+Esta preparación de seguridad no modifica estáticos, PostgreSQL ni un despliegue.
+
+## Servidor WSGI de producción: Gunicorn
+
+`requirements.txt` fija `gunicorn==27.0.1`, cuya distribución declara soporte
+para Python 3.13 y macOS/Linux. Se utiliza la entrada WSGI existente
+`config.wsgi:application`, sin modificarla ni añadir archivos de configuración.
+Referencias: [Gunicorn 27.0.1](https://pypi.org/project/gunicorn/27.0.1/) e
+[integración WSGI de Django 5.2](https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/gunicorn/).
+
+En el futuro servicio de Railway, dentro de **Settings → Deploy → Start Command**,
+configurar el siguiente comando, con la raíz del proyecto como directorio de trabajo:
+
+```sh
+exec gunicorn config.wsgi:application --bind "0.0.0.0:$PORT"
+```
+
+Railway proporciona `PORT`; no fijar un puerto de producción ni confundirlo
+con `PGPORT`. Railpack ejecuta el comando en un shell que expande `$PORT`.
+`exec` permite que Gunicorn reciba directamente las señales de parada.
+No se añade `Procfile`, Dockerfile ni configuración de Railway al repositorio;
+el comando queda documentado para introducirlo al autorizar el despliegue.
+La [documentación de Railway](https://docs.railway.com/deployments/start-command)
+describe cómo configurar este campo. No se ha cambiado ningún servicio remoto.
+
+El comando solo arranca WSGI: no ejecuta migraciones, importaciones ni
+`collectstatic`. Reutiliza las variables de producción documentadas arriba.
+Se mantienen los workers predeterminados de Gunicorn; su ajuste se hará según
+los recursos del servicio. No se ha configurado WhiteNoise ni servicio de
+estáticos: Gunicorn por sí solo no sirve los CSS, JavaScript o iconos del proyecto.
+
+### Comprobar el arranque en el MacBook
+
+Desde la raíz del proyecto, cuando se autorice instalar los requisitos:
+
+```sh
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m gunicorn --version
+DJANGO_ENV=development python -m gunicorn --check-config config.wsgi:application
+DJANGO_ENV=development python -m gunicorn config.wsgi:application --bind 127.0.0.1:8001
+```
+
+El puerto 8001 evita interferir con un `runserver` que use el 8000. En la consola
+deben aparecer el arranque de Gunicorn, la escucha en `127.0.0.1:8001` y el inicio
+del worker, sin errores de importación. En otra terminal, comprobar la respuesta:
+
+```sh
+curl -I http://127.0.0.1:8001/acceso/
+```
+
+La pantalla de acceso debe responder HTTP 200. Puede abrirse la misma URL en el
+navegador; la ausencia de estilos en esta prueba es esperable hasta preparar el
+servicio de estáticos. Detener Gunicorn con `Ctrl+C`. No se modifican el `.env`
+local ni la configuración habitual de `python manage.py runserver`.
+Estos comandos no aplican migraciones; las dependencias y tablas requeridas por
+la aplicación deben estar preparadas en su fase correspondiente.
 
 ## Fases posteriores
 
