@@ -735,8 +735,8 @@ describe cómo configurar este campo. No se ha cambiado ningún servicio remoto.
 El comando solo arranca WSGI: no ejecuta migraciones, importaciones ni
 `collectstatic`. Reutiliza las variables de producción documentadas arriba.
 Se mantienen los workers predeterminados de Gunicorn; su ajuste se hará según
-los recursos del servicio. No se ha configurado WhiteNoise ni servicio de
-estáticos: Gunicorn por sí solo no sirve los CSS, JavaScript o iconos del proyecto.
+los recursos del servicio. WhiteNoise sirve los estáticos mediante el middleware
+de Django después de ejecutar `collectstatic`, como se detalla a continuación.
 
 ### Comprobar el arranque en el MacBook
 
@@ -759,11 +759,118 @@ curl -I http://127.0.0.1:8001/acceso/
 ```
 
 La pantalla de acceso debe responder HTTP 200. Puede abrirse la misma URL en el
-navegador; la ausencia de estilos en esta prueba es esperable hasta preparar el
-servicio de estáticos. Detener Gunicorn con `Ctrl+C`. No se modifican el `.env`
+navegador. Para verificar el servicio de estáticos con ajustes de producción,
+seguir la comprobación de WhiteNoise de la siguiente sección.
+Detener Gunicorn con `Ctrl+C`. No se modifican el `.env`
 local ni la configuración habitual de `python manage.py runserver`.
 Estos comandos no aplican migraciones; las dependencias y tablas requeridas por
 la aplicación deben estar preparadas en su fase correspondiente.
+
+## Archivos estáticos en producción: WhiteNoise
+
+Se fija `whitenoise==6.12.0`, compatible con Django 5.2 y Python 3.13 según
+[PyPI](https://pypi.org/project/whitenoise/6.12.0/). El middleware se sitúa
+inmediatamente después de `SecurityMiddleware`, siguiendo la
+[documentación oficial](https://whitenoise.readthedocs.io/en/stable/django.html).
+Axes permanece al final del middleware y no cambian los permisos de las páginas.
+
+Se conservan `STATIC_URL = "static/"`, `STATICFILES_DIRS = [BASE_DIR / "static"]`
+y `STATIC_ROOT = BASE_DIR / "staticfiles"`. Con la aplicación en la raíz del
+dominio, Django genera las URLs `/static/`. Los originales de `static/` y los
+recursos de Django Admin se reúnen en `staticfiles/` mediante `collectstatic`.
+Esta carpeta generada, su manifiesto y sus variantes comprimidas quedan excluidos
+de Git por la regla existente `staticfiles/`.
+
+Con `DJANGO_ENV=production`, `STORAGES["staticfiles"]` utiliza
+`CompressedManifestStaticFilesStorage`: genera nombres con hash para caché y
+variantes gzip cuando aportan compresión. Las plantillas que usan `{% static %}`
+obtienen automáticamente la URL versionada. No se cambian plantillas ni CSS.
+El manifiesto es estricto: si falta un recurso, corregirlo y repetir
+`collectstatic`, sin desactivar esa comprobación.
+
+Con `DJANGO_ENV=development`, se mantiene `StaticFilesStorage`; `runserver`
+continúa sirviendo los originales con `DEBUG=True`, sin necesitar `collectstatic`.
+No se añade `whitenoise.runserver_nostatic`. El almacenamiento de archivos
+subidos no cambia, ni se configuran `MEDIA_ROOT`, `MEDIA_URL` o fotografías
+persistentes. WhiteNoise sirve únicamente recursos públicos del programa,
+nunca el CSV, `.env`, datos de socios o archivos subidos por usuarios.
+
+### Preparar Railway (sin ejecutar todavía)
+
+En una fase autorizada, instalar los requisitos durante la construcción:
+
+```sh
+python -m pip install -r requirements.txt
+python manage.py collectstatic --noinput
+```
+
+Estas instrucciones deben ejecutarse en la **construcción de la misma imagen**
+que se desplegará, con `DJANGO_ENV=production`, `DEBUG=False`, `SECRET_KEY` y
+los hosts autorizados definidos. En Railway, añadir `python manage.py collectstatic
+--noinput` al paso de construcción después de instalar las dependencias.
+No usar un contenedor temporal de predespliegue para generar los estáticos:
+sus archivos no formarían parte de la imagen que sirve Gunicorn.
+`collectstatic` no aplica migraciones ni requiere copiar el CSV.
+
+El Start Command sigue siendo:
+
+```sh
+exec gunicorn config.wsgi:application --bind "0.0.0.0:$PORT"
+```
+
+No hace falta volumen persistente para `staticfiles/`: se reconstruye en cada
+imagen. Esta configuración no se ha aplicado a ningún servicio de Railway.
+
+### Comprobación local con Gunicorn y almacenamiento de producción
+
+Comandos preparados para ejecutar manualmente desde la raíz del proyecto; no
+se han ejecutado durante esta implementación. Primero, si falta la dependencia:
+
+```sh
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+En la misma terminal, este subshell evita cambiar el `.env` o dejar variables
+de producción en la sesión al detener Gunicorn y salir del bloque:
+
+```sh
+(
+    export DJANGO_ENV=production
+    export DEBUG=False
+    export ALLOWED_HOSTS=localhost,127.0.0.1
+    export TRUST_PROXY_HTTPS=True
+    python manage.py collectstatic --noinput &&
+    python -m gunicorn config.wsgi:application --bind 127.0.0.1:8001
+)
+```
+
+Se reutiliza la clave privada del `.env` local. Aquí se confía en el proxy solo
+para simular HTTPS en un servidor ligado a loopback. Desde otra terminal:
+
+```sh
+curl -I -H 'X-Forwarded-Proto: https' http://127.0.0.1:8001/static/css/catalogo.css
+curl -I -H 'X-Forwarded-Proto: https' http://127.0.0.1:8001/static/js/catalogo.js
+curl -I -H 'X-Forwarded-Proto: https' http://127.0.0.1:8001/static/admin/img/icon-addlink.svg
+curl -I -H 'X-Forwarded-Proto: https' -H 'Accept-Encoding: gzip' http://127.0.0.1:8001/static/css/catalogo.css
+```
+
+Las primeras tres respuestas deben ser HTTP 200, con tipos de contenido CSS,
+JavaScript y SVG respectivamente. La última permite comprobar `Content-Encoding:
+gzip` para el CSS comprimido. El SVG de Admin comprueba un icono real existente;
+los iconos propios actuales de Ketama están integrados en las plantillas.
+Para inspeccionar el manifiesto y ver los nombres con hash, sin consultar la BD:
+
+```sh
+python -c 'import json; from pathlib import Path; p = json.loads(Path("staticfiles/staticfiles.json").read_text()); print(*(p["paths"][n] for n in ("css/catalogo.css", "js/catalogo.js", "admin/img/icon-addlink.svg")), sep="\n")'
+```
+
+Esos nombres pueden solicitarse bajo `/static/` con el mismo encabezado HTTPS;
+deben devolver HTTP 200 y cabeceras de caché de larga duración. Una petición HTTP
+sin ese encabezado devolverá una redirección a HTTPS, como corresponde a los
+ajustes de producción. Detener Gunicorn con `Ctrl+C`; los comandos no aplican
+migraciones ni modifican PostgreSQL. Para la comprobación visual habitual desde
+el navegador o el móvil, seguir usando `runserver` con los ajustes de desarrollo.
 
 ## Fases posteriores
 
@@ -772,7 +879,7 @@ se implementarán por separado.
 Las carpetas de plantillas y recursos vacías se conservan con `.gitkeep`.
 No hay manifiesto, service worker ni lógica PWA todavía.
 
-El despliegue en Railway, el servicio de estáticos en producción, las fotografías
+El despliegue en Railway, la comprobación remota de los estáticos, las fotografías
 en Railway Object Storage y las copias semanales con retención de cuatro copias
 quedan pendientes. Este esqueleto no configura aún un despliegue de producción.
 Las imágenes subidas no pertenecen a `static/`.

@@ -3,6 +3,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from django.conf import global_settings
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
@@ -70,6 +71,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -147,5 +149,18 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Solo se sustituye el almacenamiento de estáticos; el de archivos subidos
+# conserva los valores predeterminados de Django y no se configuran MEDIA_*.
+STORAGES = {
+    **global_settings.STORAGES,
+    "staticfiles": {
+        "BACKEND": (
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            if IS_PRODUCTION
+            else "django.contrib.staticfiles.storage.StaticFilesStorage"
+        ),
+    },
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

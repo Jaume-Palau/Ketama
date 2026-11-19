@@ -15,6 +15,7 @@ db.sqlite3
 
 # Archivos subidos
 media/
+# Salida de collectstatic, manifiesto y variantes comprimidas incluidas.
 staticfiles/
 
 # Datos privados, importaciones y copias de seguridad
